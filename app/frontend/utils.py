@@ -6,7 +6,18 @@ from minio import Minio
 from minio.error import S3Error
 import os
 
+import logging
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,  # Default log level
+    format="%(asctime)s [%(levelname)s] %(message)s",  # Log format
+    handlers=[
+        logging.StreamHandler()  # Log to stdout (container best practice)
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 # Initialize MinIO client
 minio_host = os.getenv("MINIO_HOST", "localhost")
@@ -25,6 +36,7 @@ minio_client = Minio(
 
 async def upload_to_minio(bucket_name, user_id, chat_id, upload_option, url=None, uploaded_files=None):
     """Save data to MinIO."""
+
     # Ensure the bucket exists
     if not minio_client.bucket_exists(bucket_name):
         minio_client.make_bucket(bucket_name)
@@ -53,24 +65,25 @@ async def upload_to_minio(bucket_name, user_id, chat_id, upload_option, url=None
 
     elif upload_option == "Upload Files" and uploaded_files:
         for uploaded_file in uploaded_files:
-            try:
-                # Upload the exact file content to MinIO
-                object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/{uploaded_file.name}"
-                uploaded_file.seek(0)  # Ensure file pointer is at the beginning
-                minio_client.put_object(
-                    bucket_name,
-                    object_name,
-                    uploaded_file,
-                    length=len(uploaded_file.getvalue()),
-                    content_type=uploaded_file.type,
-                )
-                print(f"File {uploaded_file.name} uploaded successfully to MinIO.")
-            except Exception as e:
-                print(f"Failed to upload file {uploaded_file.name}: {e}")
+            file_content = None
+            file_type = "txt" if uploaded_file.type == "text/plain" else "pdf"
+
+            # Extract content from PDF or text file
+            if file_type == "pdf":
+                reader = PdfReader(uploaded_file)
+                file_content = "".join(page.extract_text() for page in reader.pages).encode("utf-8")
+            elif file_type == "txt":
+                file_content = uploaded_file.getvalue()
+
+            # Upload the file content to MinIO
+            object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/{uploaded_file.name}"
+            data = io.BytesIO(file_content)
+            minio_client.put_object(bucket_name, object_name, data, length=data.getbuffer().nbytes)
+            print(f"File {uploaded_file.name} uploaded successfully to MinIO.")
 
 
 import requests
-import os
+
 
 async def process_document(user_id, chat_id, upload_option, url=None, uploaded_files=None):
     """
@@ -88,15 +101,12 @@ async def process_document(user_id, chat_id, upload_option, url=None, uploaded_f
     """
     DOC_VECTORDB_API_URL = f'{os.getenv("DOC_API_URL")}/upload'
 
-    files = {}
+    files = []
     if uploaded_files:
         for uploaded_file in uploaded_files:
-            try:
-                uploaded_file.seek(0)  # Ensure the file pointer is at the start
-                files[uploaded_file.name] = uploaded_file  # Add file to the request payload
-            except AttributeError as e:
-                print(f"Failed to process uploaded file {uploaded_file.name}: {e}")
+            files.append(("uploaded_files", (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)))
 
+    logger.info(f"files: {files}")
     data = {
         "user_id": user_id,
         "chat_id": chat_id,
@@ -107,13 +117,11 @@ async def process_document(user_id, chat_id, upload_option, url=None, uploaded_f
 
     # Send the POST request
     try:
-        with requests.Session() as session:
-            r = session.post(DOC_VECTORDB_API_URL, data=data, files={"file": files}, headers=headers)
-            r.raise_for_status()  # Raise exception for HTTP errors
-            return r.json()
+        r = requests.post(DOC_VECTORDB_API_URL, data=data, files=files, headers=headers)
+        r.raise_for_status()  # Raise exception for HTTP errors
+        return r.json()
     except requests.exceptions.RequestException as e:
         return {"status": "error", "message": str(e)}
-
 
 
 
