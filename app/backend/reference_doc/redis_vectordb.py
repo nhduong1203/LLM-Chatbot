@@ -46,7 +46,7 @@ def store_chunks_in_redis(redis_client, doc_id, chunks_and_embeddings):
     for idx, (chunk, embedding) in enumerate(chunks_and_embeddings):
         key = f"reference:{doc_id}:chunk:{idx}"
         data_dict = {
-            "metadata": "reference document",
+            "metadata": doc_id,
             "text": chunk,
             "embedding": embedding.tolist()
         }

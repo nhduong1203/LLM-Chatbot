@@ -2,7 +2,6 @@ from fastapi import FastAPI, UploadFile, Form
 from typing import List, Optional
 import redis
 from embedder import Embedder
-from utils import save_message
 import os
 import uvicorn
 import logging
@@ -11,7 +10,7 @@ from fastapi.responses import StreamingResponse
 
 app = FastAPI()
 embedder = Embedder()
-rag = GenerateRAGAnswer()
+rag = GenerateRAGAnswer(embedder=embedder)
 
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_port = int(os.getenv("REDIS_PORT", 6379))
@@ -25,8 +24,8 @@ logging.basicConfig(
         logging.StreamHandler()  # Log to stdout (container best practice)
     ]
 )
-
 logger = logging.getLogger(__name__)
+
 @app.post("/message")
 async def handle_upload(
     user_id: str = Form(...),
@@ -35,7 +34,6 @@ async def handle_upload(
     timestamp: float = Form(...),
 ):
     """Handle upload requests for URLs or files."""
-    save_message(user_id=user_id, chat_id=chat_id, message=message, timestamp=timestamp, role="User")
 
     return StreamingResponse(
         rag.generate_llm_answer(query=message, user_id=user_id, chat_id=chat_id),

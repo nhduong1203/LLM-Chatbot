@@ -80,8 +80,6 @@ async def handle_upload(
 
     if uploaded_files:
         for uploaded_file in uploaded_files:
-            # logger.info(f"uploaded_file: {uploaded_file}")
-            # logger.info(f"type: {uploaded_file.content_type}")
             try:
                 file_content = None
                 if uploaded_file.content_type == "application/pdf":
@@ -129,8 +127,6 @@ def main():
         "main:app",
         host=os.getenv("DOC_FASTAPI_HOST", "127.0.0.1"),
         port=int(os.getenv("DOC_FASTAPI_PORT", 8002)),
-        # reload=True,  # Uncomment this for debug
-        # workers=2,
     )
 
 

@@ -5,28 +5,68 @@ from ragas.metrics import faithfulness
 from datasets import Dataset
 import os
 import redis
-import time
+
+from redis.commands.search.field import TextField, VectorField, NumericField
+from redis.commands.search.indexDefinition import IndexDefinition, IndexType
+from redis.exceptions import ResponseError
+
+VECTOR_DIMENSION = 384
+
 
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_port = int(os.getenv("REDIS_PORT", 6379))
-
 redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=False)
 
-def save_message(user_id, chat_id, message, timestamp=None, role="User"):
-    pipeline = redis_client.pipeline()
-    # Use the current time if no timestamp is provided
-    if timestamp is None:
-        timestamp = int(time.time())
 
-    # Redis key format
-    key = f"history:{user_id}:{chat_id}:{timestamp}"
-    data_dict = {
-        "message": message,
-        "time": timestamp,
-        "role": role
-    }
-    pipeline.json().set(key, "$", data_dict)
-    print(f"Message saved under key: {key}")
+def create_redis_index(redis_client, vector_dimension, index_name):
+    """
+    Creates a Redis index for semantic search if it doesn't already exist.
+
+    Args:
+        redis_client (Redis): The Redis client instance.
+        vector_dimension (int): The dimension of the vector embeddings.
+        index_name (str): The name of the index to create.
+    """
+    try:
+        # Check if the index already exists
+        if redis_client.ft(index_name).info():
+            print(f"Index '{index_name}' already exists. Skipping creation.")
+            return
+    except ResponseError:
+        # If .info() raises a ResponseError, the index does not exist
+        pass
+
+    # Define the schema for the index
+    schema = (
+        TextField("$.message", no_stem=True, as_name="message"),  # Message content
+        NumericField("$.time", as_name="time"),            # Message timestamp
+        TextField("$.role", as_name="role"),                # Sender role
+        VectorField(
+            "$.embedding",  # Embedding field
+            "FLAT",         # Flat indexing for simplicity
+            {
+                "TYPE": "FLOAT32",
+                "DIM": vector_dimension,
+                "DISTANCE_METRIC": "COSINE",
+            },
+            as_name="vector",
+        ),
+    )
+
+    # Define the index prefix to target relevant keys
+    definition = IndexDefinition(
+        prefix=[index_name],  # Match keys starting with the index prefix
+        index_type=IndexType.JSON
+    )
+
+    try:
+        # Create the index
+        redis_client.ft(index_name).create_index(fields=schema, definition=definition)
+        print(f"Index '{index_name}' created successfully.")
+    except ResponseError as e:
+        print(f"Error creating index '{index_name}': {e}")
+        raise
+
 
 
 def calculate_context_relevancy(query, embedder, contexts):

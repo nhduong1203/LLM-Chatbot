@@ -1,8 +1,7 @@
-from typing import List
 import nltk
-from nltk.corpus import stopwords, wordnet
+from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.tokenize import word_tokenize
 
 class TextPreprocessor:
     def __init__(self):
