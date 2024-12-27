@@ -10,6 +10,10 @@ from embedder import Embedder
 from utils import crawl_website, convert_html_to_text
 import os
 import uvicorn
+import logging
+
+
+
 
 chunker = SemanticChunker()
 embedder = Embedder()
@@ -19,9 +23,7 @@ redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_port = int(os.getenv("REDIS_PORT", 6379))
 
 redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=False)
-VECTOR_DIMENSION = 384
-INDEX_NAME = "idx:embedding"
-create_redis_index(redis_client, VECTOR_DIMENSION, INDEX_NAME)
+
 
 
 # Initialize MinIO client
@@ -43,6 +45,16 @@ def ensure_bucket_exists(bucket_name: str):
     if not minio_client.bucket_exists(bucket_name):
         minio_client.make_bucket(bucket_name)
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,  # Default log level
+    format="%(asctime)s [%(levelname)s] %(message)s",  # Log format
+    handlers=[
+        logging.StreamHandler()  # Log to stdout (container best practice)
+    ]
+)
+
+logger = logging.getLogger(__name__)
 @app.post("/upload")
 async def handle_upload(
     user_id: str = Form(...),
@@ -71,6 +83,8 @@ async def handle_upload(
 
     if uploaded_files:
         for uploaded_file in uploaded_files:
+            # logger.info(f"uploaded_file: {uploaded_file}")
+            # logger.info(f"type: {uploaded_file.content_type}")
             try:
                 file_content = None
                 if uploaded_file.content_type == "application/pdf":
@@ -89,6 +103,9 @@ async def handle_upload(
                         continue
                 else:
                     file_content = (await uploaded_file.read()).decode("utf-8")
+                
+                # logger.info(f"content: {file_content}")
+
 
                 if file_content:
                     chunks = chunker.process_file(file_content)
@@ -115,6 +132,8 @@ def main():
         "main:app",
         host=os.getenv("DOC_FASTAPI_HOST", "127.0.0.1"),
         port=int(os.getenv("DOC_FASTAPI_PORT", 8002)),
+        # reload=True,  # Uncomment this for debug
+        # workers=2,
     )
 
 

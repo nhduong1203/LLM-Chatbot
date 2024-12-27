@@ -7,7 +7,7 @@ from document_preprocessor import TextPreprocessor
 
 
 class SemanticChunker:
-    def __init__(self, model_name='sentence-transformers/all-mpnet-base-v1'):
+    def __init__(self, model_name='all-MiniLM-L12-v2'):
         """Initialize the TextChunker with a specified sentence transformer model."""
         self.model = SentenceTransformer(model_name)
         self.preprocessor = TextPreprocessor()
@@ -116,19 +116,3 @@ class SemanticChunker:
         final_chunks.append(chunks[-1])
         return final_chunks
 
-if __name__ == "__main__":
-    chunker = TextChunker()
-    
-    # Process a text file
-    file_path = "website_content.txt"
-    chunks = chunker.process_file(
-        file_path,
-        context_window=1,
-        percentile_threshold=95,
-        min_chunk_size=3
-    )
-
-    # Print results
-    print(f"Successfully split text into {len(chunks)} chunks")
-    print("\nFirst chunk preview:")
-    print(f"{chunks[0][:200]}...")

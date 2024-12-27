@@ -2,6 +2,8 @@ from redis.commands.search.field import TextField, VectorField
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.exceptions import ResponseError
 
+VECTOR_DIMENSION = 384
+
 def create_redis_index(redis_client, vector_dimension, index_name):
     try:
         # Check if the index already exists
@@ -28,7 +30,7 @@ def create_redis_index(redis_client, vector_dimension, index_name):
         ),
     )
 
-    definition = IndexDefinition(prefix=["reference:"], index_type=IndexType.JSON)
+    definition = IndexDefinition(prefix=[index_name], index_type=IndexType.JSON)
 
     try:
         # Create the index
@@ -50,3 +52,14 @@ def store_chunks_in_redis(redis_client, doc_id, chunks_and_embeddings):
         }
         pipeline.json().set(key, "$", data_dict)
     pipeline.execute()
+
+    # Split the doc_id by ':'
+    parts = doc_id.split(':')
+
+    # Extract user_id and chat_id
+    user_id = parts[0]
+    chat_id = parts[1]
+
+    
+    INDEX_NAME = f"reference:{user_id}:{chat_id}"
+    create_redis_index(redis_client, VECTOR_DIMENSION, INDEX_NAME)

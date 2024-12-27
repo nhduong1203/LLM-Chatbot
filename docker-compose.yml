@@ -42,7 +42,15 @@ services:
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
     volumes:
       - ./data:/data
-      
+    
+    deploy:
+      resources:
+        limits:
+          memory: 4g # Limit memory to 4GB
+          cpus: "2.0" # Limit to 2 CPUs
+        reservations:
+          memory: 2g # Reserve 2GB of memory
+          cpus: "1.0" # Reserve 1 CPU
 
     depends_on:
       - redis
