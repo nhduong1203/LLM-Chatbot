@@ -32,7 +32,6 @@ services:
       - .env
     ports:
       - ${DOC_FASTAPI_PORT}:${DOC_FASTAPI_PORT}
-
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -72,8 +71,11 @@ services:
       - ${CHAT_FASTAPI_PORT}:${CHAT_FASTAPI_PORT}
     environment:
       - DOC_API_URL=http://doc_management_api:${DOC_FASTAPI_PORT}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
-      - "course_management_api"
+      - "doc_management_api"
+      - redis
     # deploy:
     #   resources:
     #     reservations:
@@ -93,11 +95,11 @@ services:
       - MINIO_PORT=9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      # - CHAT_API_URL=http://chat_api:${CHAT_FASTAPI_PORT}
+      - CHAT_API_URL=http://chat_api:${CHAT_FASTAPI_PORT}
     command: ["streamlit", "run", "QA.py", "--server.port", "${FRONTEND_PORT}"]
     depends_on:
       - "doc_management_api"
-      # - "chat_api"      
+      - "chat_api"      
     volumes:
       - ./app/frontend:/app
 

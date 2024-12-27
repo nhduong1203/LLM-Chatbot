@@ -5,13 +5,14 @@ from ragas.metrics import faithfulness
 from datasets import Dataset
 import os
 import redis
+import time
 
 redis_host = os.getenv("REDIS_HOST", "localhost")
 redis_port = int(os.getenv("REDIS_PORT", 6379))
 
 redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=False)
 
-def save_message(user_id, chat_id, message, time=None, role="User"):
+def save_message(user_id, chat_id, message, timestamp=None, role="User"):
     pipeline = redis_client.pipeline()
     # Use the current time if no timestamp is provided
     if timestamp is None:

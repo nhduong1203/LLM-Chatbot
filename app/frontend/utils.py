@@ -126,7 +126,7 @@ async def process_document(user_id, chat_id, upload_option, url=None, uploaded_f
     except requests.exceptions.RequestException as e:
         return {"status": "error", "message": str(e)}
     
-async def send_message(user_id, chat_id, message):
+def send_message(user_id, chat_id, message):
     """
     Sends a request to the upload endpoint to process documents or URLs.
 
@@ -152,14 +152,15 @@ async def send_message(user_id, chat_id, message):
 
     headers = {"Accept": "application/json"}
 
-    # Send the POST request
-    with httpx.stream('POST', CHAT_API_URL, json=data, timeout=None) as r:
-        get_context = True
-        for line in r.iter_lines():  # or, for line in r.iter_lines():
+
+    with httpx.stream('POST', CHAT_API_URL, data=data, headers=headers, timeout=None) as r:
+        if r.status_code != 200:
+            raise Exception(f"Error: {r.status_code}, {r.text}")
+        
+        for line in r.iter_text():
+            logger.debug(f"Received line: {line}")
             json_object = json.loads(line)
-            if get_context:
-                st.session_state.contexts = json_object["context"]
-                get_context = False
+            logger.info(json_object)
             yield json_object["token"]
             time.sleep(0.05)
 

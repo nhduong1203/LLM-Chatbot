@@ -32,10 +32,10 @@ async def handle_upload(
     user_id: str = Form(...),
     chat_id: str = Form(...),
     message: str = Form(...),
-    time: float = Form(...),
+    timestamp: float = Form(...),
 ):
     """Handle upload requests for URLs or files."""
-    save_message(user_id=user_id, chat_id=chat_id, message=message, time=time, role="User")
+    save_message(user_id=user_id, chat_id=chat_id, message=message, timestamp=timestamp, role="User")
 
     return StreamingResponse(
         rag.generate_llm_answer(query=message, user_id=user_id, chat_id=chat_id),

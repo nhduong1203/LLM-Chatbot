@@ -38,7 +38,6 @@ def stream_output(task_id, stream=False):
     headers = {
         "Authorization": f"Bearer {os.environ['RUNPOD_AI_API_KEY']}"
     }
-    final_respond = ""
 
     try:
         while True:
@@ -46,9 +45,8 @@ def stream_output(task_id, stream=False):
             if response.status_code == 200:
                 data = response.json()
                 if len(data['stream']) > 0:
-                    new_output = ''.join(data["stream"][0]["output"]["choices"][0]["tokens"])
-                    final_respond += new_output
-                    yield new_output
+                    for word in data["stream"][0]["output"]["choices"][0]["tokens"]:
+                        yield word
                 if data.get('status') == 'COMPLETED':
                     break
             time.sleep(0.1 if stream else 1)

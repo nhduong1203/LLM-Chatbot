@@ -4,6 +4,7 @@ import os
 import redis
 from embedder import Embedder
 from utils import save_message
+import json
 
 from redis.commands.search.query import Query
 from endpoint_request import run
@@ -34,27 +35,44 @@ class GenerateRAGAnswer:
         self.query = ""
         self.contexts = []
 
-    def retrieve_contexts(self, query, user_id="user123", chat_id="chat456", top_k=5):
+    def retrieve_contexts(self, query, user_id="user123", chat_id="chat456", top_k=3):
         self.query = query
         INDEX_NAME = f"reference:{user_id}:{chat_id}"
-        encoded_query = embedder.embed(self.query)
-        query = (
-            Query(f'(*)=>[KNN {top_k} @vector $query_vector AS vector_score]')
-            .sort_by('vector_score')
-            .return_fields('vector_score', 'text')
-            .dialect(2)
-        )
-        self.contexts = redis_client.ft(INDEX_NAME).search(
-            query,
-            {
-            'query_vector': np.array(encoded_query, dtype=np.float32).tobytes()
-            }
-        ).docs
+        
+        try:
+            # Check if the index exists
+            if not redis_client.ft(INDEX_NAME).info():
+                print(f"Index {INDEX_NAME} does not exist.")
+                self.contexts = []  # Return an empty list if index is missing
+                return
 
-        # TODO
-        # self.contexts = [reference_doc["text"] for reference_doc in reference_docs]
+            # Embed the query
+            encoded_query = embedder.embed(self.query)
+
+            # Define the query
+            search_query = (
+                Query(f'(*)=>[KNN {top_k} @vector $query_vector AS vector_score]')
+                .sort_by('vector_score')
+                .return_fields('vector_score', 'text')
+                .dialect(2)
+            )
+
+            # Perform the search
+            results = redis_client.ft(INDEX_NAME).search(
+                search_query,
+                {
+                    'query_vector': np.array(encoded_query, dtype=np.float32).tobytes()
+                }
+            )
+
+            self.contexts = results.docs if results.docs else []
+
+        except Exception as e:
+            print(f"Error while retrieving contexts: {e}")
+            self.contexts = []  # Handle unexpected errors gracefully
 
         return
+
 
     def gen_prompt(self, query, user_id="user123", chat_id="chat456") -> str:
         """
@@ -63,31 +81,42 @@ class GenerateRAGAnswer:
         Returns:
             str: A formatted string that serves as a prompt for the language model.
         """
-        # Extract the 'text' field from each context dictionary
+        # Retrieve contexts
         self.retrieve_contexts(query, user_id, chat_id)
 
-        context_texts = [ctx["text"] for ctx in self.contexts]
+        # Check if contexts are available
+        if not self.contexts:
+            # If no context is found, create a simpler prompt
+            prompt_template = (
+                """
+                You are a teaching assistant.
+                Unfortunately, no relevant information from the teacher's recording is available in the system.
+                Please try your best to answer the student's question based on your general knowledge.
+                If you cannot answer, ask the student to clarify the question.
 
-        # Join the extracted text with double newlines
-        context = "\n\n".join(context_texts)
-
-        prompt_template = (
-            """
-            You are a teaching assistant.
-            Given a set of relevant information from teacher's recording during the lesson """
-            """(delimited by <info></info>), please compose an answer to the question of a student.
-            Ensure that the answer is accurate, has a friendly tone, and sounds helpful.
-            If you cannot answer, ask the student to clarify the question.
-            If no context is available in the system, """
-            f"""please answer that you can not find the relevant context in the system.
-            <info>
-            {context}
-            </info>
-            Question: {self.query}
-            Answer: """
-        )
+                Question: {query}
+                Answer: """
+            ).format(query=self.query)
+        else:
+            # If contexts are available, construct the detailed prompt
+            context_texts = [ctx["text"] for ctx in self.contexts]
+            context = "\n\n".join(context_texts)
+            prompt_template = (
+                """
+                You are a teaching assistant.
+                Given a set of relevant information from teacher's recording during the lesson """
+                """(delimited by <info></info>), please compose an answer to the question of a student.
+                Ensure that the answer is accurate, has a friendly tone, and sounds helpful.
+                If you cannot answer, ask the student to clarify the question.
+                <info>
+                {context}
+                </info>
+                Question: {query}
+                Answer: """
+            ).format(context=context, query=self.query)
 
         return prompt_template
+
     
     async def generate_llm_answer(self, query, user_id="user123", chat_id="chat456"):
         """
@@ -102,7 +131,7 @@ class GenerateRAGAnswer:
         final_respond = ""
         for chunk in run(final_prompt, stream=True):
             final_respond += chunk
-            yield chunk
+            yield json.dumps({"token": chunk}) + "\n"
 
         save_message(user_id=user_id, chat_id=chat_id, message=final_respond, role="Assistant")
 

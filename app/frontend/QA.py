@@ -15,6 +15,8 @@ if "messages" not in st.session_state:
     st.session_state["messages"] = []  # Chat messages history
 if "uploader_key" not in st.session_state:
     st.session_state.uploader_key = 0
+if "contexts" not in st.session_state:
+    st.session_state.contexts = []
 
 
 def update_key():
@@ -93,17 +95,17 @@ if prompt := st.chat_input("Ask your question:"):
 
         # Generate a simulated response
         with st.chat_message("assistant"):
-            response = st.write_stream(
+            st.write_stream(
                 send_message(user_id="user123", chat_id="chat456", message=prompt)
             )
 
             # Add assistant response to chat history
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": response,
-                }
-            )
+        #     st.session_state.messages.append(
+        #         {
+        #             "role": "assistant",
+        #             "content": response,
+        #         }
+        #     )
 
-        # Add assistant response to chat history
-        st.session_state["messages"].append({"role": "assistant", "content": response})
+        # # Add assistant response to chat history
+        # st.session_state["messages"].append({"role": "assistant", "content": response})
