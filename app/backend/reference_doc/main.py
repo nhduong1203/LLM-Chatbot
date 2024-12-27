@@ -5,18 +5,15 @@ from PyPDF2 import PdfReader
 from embedder import Embedder
 from semantic_chunking import SemanticChunker
 import redis
-from redis_vectordb import create_redis_index, store_chunks_in_redis
+from redis_vectordb import store_chunks_in_redis
 from embedder import Embedder
 from utils import crawl_website, convert_html_to_text
 import os
 import uvicorn
 import logging
 
-
-
-
-chunker = SemanticChunker()
 embedder = Embedder()
+chunker = SemanticChunker(embedder)
 
 app = FastAPI()
 redis_host = os.getenv("REDIS_HOST", "localhost")

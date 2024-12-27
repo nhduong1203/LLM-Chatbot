@@ -1,15 +1,13 @@
-import nltk
 from nltk.tokenize import sent_tokenize
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from document_preprocessor import TextPreprocessor
 
 
 class SemanticChunker:
-    def __init__(self, model_name='all-MiniLM-L12-v2'):
+    def __init__(self, model):
         """Initialize the TextChunker with a specified sentence transformer model."""
-        self.model = SentenceTransformer(model_name)
+        self.model = model
         self.preprocessor = TextPreprocessor()
 
     def process_file(self, file_path, context_window=1, percentile_threshold=95, min_chunk_size=3):
