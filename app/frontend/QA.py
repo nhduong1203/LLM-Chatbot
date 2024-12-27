@@ -1,5 +1,6 @@
 import streamlit as st
-from utils import sync_upload_to_minio, sync_process_document
+from utils import sync_upload_to_minio, sync_process_document, send_message
+
 
 
 # Configure Streamlit page layout
@@ -92,8 +93,17 @@ if prompt := st.chat_input("Ask your question:"):
 
         # Generate a simulated response
         with st.chat_message("assistant"):
-            response = f"Simulated response to: {prompt}"
-            st.markdown(response)
+            response = st.write_stream(
+                send_message(user_id="user123", chat_id="chat456", message=prompt)
+            )
+
+            # Add assistant response to chat history
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response,
+                }
+            )
 
         # Add assistant response to chat history
         st.session_state["messages"].append({"role": "assistant", "content": response})

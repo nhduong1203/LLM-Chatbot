@@ -1,0 +1,9 @@
+sentence-transformers==3.0.1
+torch==2.3.1
+transformers==4.42.4
+fastapi[standard]
+redis==5.2.1
+datasets
+ragas
+requests
+scikit-learn

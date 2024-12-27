@@ -5,6 +5,9 @@ import time
 from minio import Minio
 from minio.error import S3Error
 import os
+import json
+import httpx
+import streamlit as st
 
 import logging
 
@@ -137,25 +140,28 @@ async def send_message(user_id, chat_id, message):
     Returns:
         dict: The API response in JSON format.
     """
-    CHAT_API_URL = f'{os.getenv("DOC_API_URL")}/message'
+    CHAT_API_URL = f'{os.getenv("CHAT_API_URL")}/message'
 
     # logger.info(f"files: {files}")
     data = {
         "user_id": user_id,
         "chat_id": chat_id,
         "message": message,
-        # "timestamp": time.time(),
+        "timestamp": time.time(),
     }
 
     headers = {"Accept": "application/json"}
 
     # Send the POST request
-    try:
-        r = requests.post(CHAT_API_URL, data=data, headers=headers)
-        r.raise_for_status()  # Raise exception for HTTP errors
-        return r.json()
-    except requests.exceptions.RequestException as e:
-        return {"status": "error", "message": str(e)}
+    with httpx.stream('POST', CHAT_API_URL, json=data, timeout=None) as r:
+        get_context = True
+        for line in r.iter_lines():  # or, for line in r.iter_lines():
+            json_object = json.loads(line)
+            if get_context:
+                st.session_state.contexts = json_object["context"]
+                get_context = False
+            yield json_object["token"]
+            time.sleep(0.05)
 
 
 
