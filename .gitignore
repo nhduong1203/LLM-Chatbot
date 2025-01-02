@@ -1,6 +1,11 @@
 test
 .env
 env
-.terraform*
+# Ignore .terraform directory and its contents
+.terraform/
 
+# Ignore .terraform.lock.hcl files
+*.terraform.lock.hcl
+
+# Ignore any terraform state files
 *.tfstate
