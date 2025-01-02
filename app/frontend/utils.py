@@ -1,13 +1,8 @@
 import requests
-import io
-from PyPDF2 import PdfReader
 import time
-from minio import Minio
-from minio.error import S3Error
 import os
 import json
 import httpx
-import streamlit as st
 
 import logging
 
@@ -22,70 +17,10 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Initialize MinIO client
-minio_host = os.getenv("MINIO_HOST", "localhost")
-minio_port = os.getenv("MINIO_PORT", "9000")
-minio_access_key = os.getenv("MINIO_ACCESS_KEY", "admin")
-minio_secret_key = os.getenv("MINIO_SECRET_KEY", "admin123")
-minio_secure = False
-
-minio_client = Minio(
-    f"{minio_host}:{minio_port}",
-    access_key=minio_access_key,
-    secret_key=minio_secret_key,
-    secure=minio_secure
-)
-
-
-async def upload_to_minio(bucket_name, user_id, chat_id, upload_option, url=None, uploaded_files=None):
-    """Save data to MinIO."""
-
-    # Ensure the bucket exists
-    if not minio_client.bucket_exists(bucket_name):
-        minio_client.make_bucket(bucket_name)
-
-    if upload_option == "Website URL" and url:
-        # Append URL to url.txt
-        object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/urls/url.txt"
-        try:
-            # Fetch the existing URL file
-            try:
-                response = minio_client.get_object(bucket_name, object_name)
-                existing_data = response.read().decode("utf-8")
-                response.close()
-            except S3Error:
-                existing_data = ""  # No existing file
-
-            # Append the new URL
-            updated_data = existing_data + url + "\n"
-
-            # Upload the updated file
-            data = io.BytesIO(updated_data.encode("utf-8"))
-            minio_client.put_object(bucket_name, object_name, data, length=data.getbuffer().nbytes)
-            print(f"URL {url} added successfully to url.txt in MinIO.")
-        except Exception as e:
-            print(f"Failed to update url.txt: {e}")
-
-    elif upload_option == "Upload Files" and uploaded_files:
-        for uploaded_file in uploaded_files:
-            file_content = None
-            file_type = "txt" if uploaded_file.type == "text/plain" else "pdf"
-
-            # Extract content from PDF or text file
-            if file_type == "pdf":
-                reader = PdfReader(uploaded_file)
-                file_content = "".join(page.extract_text() for page in reader.pages).encode("utf-8")
-            elif file_type == "txt":
-                file_content = uploaded_file.getvalue()
-
-            # Upload the file content to MinIO
-            object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/{uploaded_file.name}"
-            data = io.BytesIO(file_content)
-            minio_client.put_object(bucket_name, object_name, data, length=data.getbuffer().nbytes)
-            print(f"File {uploaded_file.name} uploaded successfully to MinIO.")
-
-
+import asyncio
 import requests
+
+NGINX_URL = os.getenv("NGINX_URL")
 
 
 async def process_document(user_id, chat_id, upload_option, url=None, uploaded_files=None):
@@ -102,7 +37,7 @@ async def process_document(user_id, chat_id, upload_option, url=None, uploaded_f
     Returns:
         dict: The API response in JSON format.
     """
-    DOC_VECTORDB_API_URL = f'{os.getenv("DOC_API_URL")}/upload'
+    DOC_VECTORDB_API_URL = f'{NGINX_URL}/upload'
 
     files = []
     if uploaded_files:
@@ -140,7 +75,8 @@ def send_message(user_id, chat_id, message):
     Returns:
         dict: The API response in JSON format.
     """
-    CHAT_API_URL = f'{os.getenv("CHAT_API_URL")}/message'
+    CHAT_API_URL = f'{NGINX_URL}/message'
+    headers = {"Accept": "application/json"}
 
     # logger.info(f"files: {files}")
     data = {
@@ -150,26 +86,28 @@ def send_message(user_id, chat_id, message):
         "timestamp": time.time(),
     }
 
-    headers = {"Accept": "application/json"}
-
-
     with httpx.stream('POST', CHAT_API_URL, data=data, headers=headers, timeout=None) as r:
         if r.status_code != 200:
             raise Exception(f"Error: {r.status_code}, {r.text}")
         
         for line in r.iter_text():
-            logger.debug(f"Received line: {line}")
-            json_object = json.loads(line)
-            logger.info(json_object)
-            yield json_object["token"]
+            logger.info(f"Received line: {line}")
+            yield line
             time.sleep(0.05)
 
 
+def testing():
+    CHAT_API_URL = f'{NGINX_URL}/test'
+    headers = {"Accept": "application/json"}
 
-import asyncio
-
-def sync_upload_to_minio(bucket_name, user_id, chat_id, upload_option, url=None, uploaded_files=None):
-    asyncio.run(upload_to_minio(bucket_name, user_id, chat_id, upload_option, url=url, uploaded_files=uploaded_files))
+    with httpx.stream('POST', CHAT_API_URL, headers=headers, timeout=None) as r:
+        if r.status_code != 200:
+            raise Exception(f"Error: {r.status_code}, {r.text}")
+        
+        for line in r.iter_text():
+            logger.info(f"Received token: {line}")  # Print the token to the terminal incrementally
+            yield line  # Yield token for further processing (if needed)
+            time.sleep(0.05)
 
 def sync_process_document(user_id, chat_id, upload_option, url=None, uploaded_files=None):
     asyncio.run(process_document(user_id, chat_id, upload_option, url=url, uploaded_files=uploaded_files))

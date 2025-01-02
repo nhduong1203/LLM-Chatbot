@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-streamlit
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-streamlit
+  template:
+    metadata:
+      labels:
+        app: frontend-streamlit
+    spec:
+      nodeSelector:
+        workload: frontend
+      containers:
+      - name: frontend-streamlit
+        image: your-dockerhub-username/frontend_streamlit:latest
+        ports:
+        - containerPort: 8501
+        env:
+        - name: DOC_API_URL
+          value: http://doc-management-api:8000
+        - name: CHAT_API_URL
+          value: http://chat-api:8001
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-streamlit
+spec:
+  selector:
+    app: frontend-streamlit
+  ports:
+  - port: 8501
+    targetPort: 8501

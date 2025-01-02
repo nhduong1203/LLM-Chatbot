@@ -2,6 +2,10 @@ from redis.commands.search.field import TextField, VectorField
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.exceptions import ResponseError
 
+from opentelemetry import trace
+
+tracer = trace.get_tracer(__name__)
+
 VECTOR_DIMENSION = 384
 
 def create_redis_index(redis_client, vector_dimension, index_name):
@@ -42,24 +46,33 @@ def create_redis_index(redis_client, vector_dimension, index_name):
 
 
 def store_chunks_in_redis(redis_client, doc_id, chunks_and_embeddings):
-    pipeline = redis_client.pipeline()
-    for idx, (chunk, embedding) in enumerate(chunks_and_embeddings):
-        key = f"reference:{doc_id}:chunk:{idx}"
-        data_dict = {
-            "metadata": doc_id,
-            "text": chunk,
-            "embedding": embedding.tolist()
-        }
-        pipeline.json().set(key, "$", data_dict)
-    pipeline.execute()
+    with tracer.start_as_current_span("store_chunks_in_redis") as span:
+        span.set_attribute("doc_id", doc_id)
+        try:
+            pipeline = redis_client.pipeline()
+            for idx, (chunk, embedding) in enumerate(chunks_and_embeddings):
+                key = f"reference:{doc_id}:chunk:{idx}"
+                data_dict = {
+                    "metadata": doc_id,
+                    "text": chunk,
+                    "embedding": embedding.tolist()
+                }
+                pipeline.json().set(key, "$", data_dict)
+                span.add_event(f"Prepared chunk {idx} for doc_id {doc_id}")
+            
+            # Execute the pipeline
+            pipeline.execute()
+            span.add_event(f"Stored all chunks for doc_id {doc_id}")
 
-    # Split the doc_id by ':'
-    parts = doc_id.split(':')
+            # Split the doc_id by ':'
+            parts = doc_id.split(':')
+            user_id = parts[0]
+            chat_id = parts[1]
 
-    # Extract user_id and chat_id
-    user_id = parts[0]
-    chat_id = parts[1]
-
-    
-    INDEX_NAME = f"reference:{user_id}:{chat_id}"
-    create_redis_index(redis_client, VECTOR_DIMENSION, INDEX_NAME)
+            # Create an index
+            INDEX_NAME = f"reference:{user_id}:{chat_id}"
+            span.add_event(f"Creating Redis index {INDEX_NAME}")
+            create_redis_index(redis_client, VECTOR_DIMENSION, INDEX_NAME)
+        except Exception as e:
+            span.record_exception(e)
+            raise

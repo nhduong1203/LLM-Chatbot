@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import sync_upload_to_minio, sync_process_document, send_message
+from utils import sync_process_document, send_message, testing
 
 
 
@@ -40,7 +40,6 @@ if upload_option == "Website URL":
             st.sidebar.success(f"Added URL: {url}")
 
             # TODO
-            sync_upload_to_minio("my-bucket", "user123", "chat456", "Website URL", url=url)
             sync_process_document("user123", "chat456", "Website URL", url=url)
 
 
@@ -51,13 +50,11 @@ elif upload_option == "Upload Files":
         if uploaded_files:
 
             # TODO
-            sync_upload_to_minio("my-bucket", "user123", "chat456", "Upload Files", uploaded_files=uploaded_files)
             sync_process_document("user123", "chat456", "Upload Files", uploaded_files=uploaded_files)
 
             for uploaded_file in uploaded_files:
                 st.session_state["references"].append(f"File: {uploaded_file.name}")
             st.sidebar.success(f"Added {len(uploaded_files)} files.")
-            # st.rerun() 
 
 # Display current reference sources
 st.sidebar.subheader("Current References")
@@ -86,6 +83,21 @@ if prompt := st.chat_input("Ask your question:"):
         # Clear chat history
         st.session_state["messages"].clear()
         st.info("Chat history cleared.")
+    if prompt == "/alo":
+        # Clear chat history
+        with st.chat_message("user"):
+            st.markdown("alo")
+
+        with st.chat_message("assistant"):
+            answer = st.write_stream(
+                testing()
+            )
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": answer,
+                }
+            )
     else:
         # Display user message
         with st.chat_message("user"):
@@ -104,14 +116,3 @@ if prompt := st.chat_input("Ask your question:"):
                     "content": answer,
                 }
             )
-
-            # Add assistant response to chat history
-        #     st.session_state.messages.append(
-        #         {
-        #             "role": "assistant",
-        #             "content": response,
-        #         }
-        #     )
-
-        # # Add assistant response to chat history
-        # st.session_state["messages"].append({"role": "assistant", "content": response})

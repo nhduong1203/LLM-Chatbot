@@ -39,6 +39,8 @@ services:
       - MINIO_PORT=9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=${JAEGER_AGENT_PORT}
     volumes:
       - ./data:/data
     
@@ -50,17 +52,16 @@ services:
         reservations:
           memory: 2g # Reserve 2GB of memory
           cpus: "1.0" # Reserve 1 CPU
+          # devices: # enable if you are using GPU
+          #   - driver: nvidia
+          #     count: 1
+          #     capabilities: [gpu]
+
 
     depends_on:
       - redis
       - minio
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+
 
   chat_api:
     container_name: chat_api
@@ -70,13 +71,16 @@ services:
     ports:
       - ${CHAT_FASTAPI_PORT}:${CHAT_FASTAPI_PORT}
     environment:
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=${JAEGER_AGENT_PORT}
       - DOC_API_URL=http://doc_management_api:${DOC_FASTAPI_PORT}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      
     depends_on:
       - "doc_management_api"
       - redis
-    # deploy:
+    # deploy: # enable if you are using GPU
     #   resources:
     #     reservations:
     #       devices:
@@ -90,12 +94,9 @@ services:
     ports:
       - ${FRONTEND_PORT}:${FRONTEND_PORT}
     environment:
-      - DOC_API_URL=http://doc_management_api:${DOC_FASTAPI_PORT}
-      - MINIO_HOST=minio
-      - MINIO_PORT=9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - CHAT_API_URL=http://chat_api:${CHAT_FASTAPI_PORT}
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=${JAEGER_AGENT_PORT}
+      - NGINX_URL=http://nginx:${NGINX_PORT}
     command: ["streamlit", "run", "QA.py", "--server.port", "${FRONTEND_PORT}"]
     depends_on:
       - "doc_management_api"
@@ -103,7 +104,34 @@ services:
     volumes:
       - ./app/frontend:/app
 
-  
+  jaeger:
+    image: jaegertracing/all-in-one:1.45
+    environment: 
+      - ${JAEGER_AGENT_PORT}:${JAEGER_AGENT_PORT}
+      - COLLECTOR_ZIPKIN_HTTP_PORT=:9411
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - 6831:6831/udp
+      - 6832:6832/udp
+      - 5778:5778
+      - 16686:16686
+      - 14268:14268
+      - 14269:14269
+      - 14250:14250
+      - 9411:9411
+      - 4317:4317
+      - 4318:4318
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+    depends_on:
+      - chat_api
+      - doc_management_api
 
 volumes:
   redis_data:
