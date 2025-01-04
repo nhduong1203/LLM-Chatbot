@@ -38,7 +38,7 @@ def run(prompt, stream=True):
             "sampling_params": {
                 "max_tokens": 500
             },
-            'batch_size': 8,
+            "apply_chat_template": True,
             'stream': stream
         }
 

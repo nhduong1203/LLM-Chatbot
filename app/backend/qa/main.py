@@ -49,10 +49,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def gen():
-    for i in range(20):
-        yield f"Say Hellooo {i} \n"
-    yield "END"
+# def gen():
+#     for i in range(20):
+#         yield f"Say Hellooo {i} \n"
+#     yield "END"
+# @app.post("/test")
+# async def message_response():
+#     generator = gen()
+#     return StreamingResponse(generator, media_type="text/event-stream")
 
 @app.post("/message")
 async def message_response(
@@ -61,8 +65,7 @@ async def message_response(
     message: str = Form(...),
     timestamp: float = Form(...),
 ):
-    """Handle upload requests for URLs or files."""
-    with tracer.start_as_current_span("handle_upload") as span:
+    with tracer.start_as_current_span("message") as span:
         span.set_attribute("user_id", user_id)
         span.set_attribute("chat_id", chat_id)
         span.set_attribute("message", message)
@@ -72,14 +75,10 @@ async def message_response(
             # Generate an LLM answer using RAG
             # The generator end when the function that create the generator end.
             generator = rag.generate_llm_answer(query=message, user_id=user_id, chat_id=chat_id)
-            # span.add_event("Generator created successfully")
             return StreamingResponse(generator, media_type="text/event-stream")
         except Exception as e:
             span.record_exception(e)
             logger.error(f"Error generating response: {e}")
             raise
 
-@app.post("/test")
-async def message_response():
-    generator = gen()
-    return StreamingResponse(generator, media_type="text/event-stream")
+

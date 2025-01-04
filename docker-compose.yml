@@ -1,6 +1,25 @@
 version: '3.8'
 
 services:
+  # --------------------------------------------- DATABASE -----------------------------------------------------------
+  cassandra:
+    image: cassandra:latest
+    container_name: cassandra-container
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=my-cluster
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+      - ./init.cql:/scripts/init.cql
+    entrypoint: >
+      /bin/sh -c "
+      cassandra -R && 
+      until cqlsh -e 'DESCRIBE KEYSPACES'; do sleep 5; done; 
+      cqlsh -f /scripts/init.cql &&
+      tail -f /dev/null
+      "
+
   minio:
     container_name: minio
     image: minio/minio
@@ -23,7 +42,7 @@ services:
     volumes:
       - redis_data:/data
 
-
+  # --------------------------------------------- BACKEND -----------------------------------------------------------
 
   doc_management_api:
     container_name: doc_management_api
@@ -49,9 +68,9 @@ services:
         limits:
           memory: 4g # Limit memory to 4GB
           cpus: "2.0" # Limit to 2 CPUs
-        reservations:
-          memory: 2g # Reserve 2GB of memory
-          cpus: "1.0" # Reserve 1 CPU
+        # reservations:
+        #   memory: 2g # Reserve 2GB of memory
+        #   cpus: "1.0" # Reserve 1 CPU
           # devices: # enable if you are using GPU
           #   - driver: nvidia
           #     count: 1
@@ -88,6 +107,8 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
+  # --------------------------------------------- FRONTEND -----------------------------------------------------------
+
   frontend_streamlit:
     container_name: frontend_streamlit
     build: ./app/frontend
@@ -103,6 +124,8 @@ services:
       - "chat_api"      
     volumes:
       - ./app/frontend:/app
+
+  # --------------------------------------------- OPS -----------------------------------------------------------
 
   jaeger:
     image: jaegertracing/all-in-one:1.45
@@ -135,6 +158,7 @@ services:
 
 volumes:
   redis_data:
+  cassandra-data:
 
 
 networks:
