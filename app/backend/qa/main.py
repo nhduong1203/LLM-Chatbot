@@ -1,9 +1,6 @@
 from fastapi import FastAPI, UploadFile, Form
 from typing import List, Optional
-import redis
-from embedder import Embedder
 import os
-import uvicorn
 import logging
 from generate_answer import GenerateRAGAnswer
 from fastapi.responses import StreamingResponse
@@ -32,12 +29,7 @@ trace.set_tracer_provider(provider)
 tracer = trace.get_tracer(__name__)
 
 app = FastAPI()
-embedder = Embedder()
-rag = GenerateRAGAnswer(embedder=embedder)
-
-redis_host = os.getenv("REDIS_HOST", "localhost")
-redis_port = int(os.getenv("REDIS_PORT", 6379))
-redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=False)
+rag = GenerateRAGAnswer()
 
 # Configure logging
 logging.basicConfig(
@@ -48,15 +40,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
-# def gen():
-#     for i in range(20):
-#         yield f"Say Hellooo {i} \n"
-#     yield "END"
-# @app.post("/test")
-# async def message_response():
-#     generator = gen()
-#     return StreamingResponse(generator, media_type="text/event-stream")
 
 @app.post("/message")
 async def message_response(

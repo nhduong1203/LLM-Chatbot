@@ -6,6 +6,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+import runpod
 
 # Configure OpenTelemetry Tracer
 resource = Resource(attributes={SERVICE_NAME: "runpod-client"})
@@ -27,11 +28,11 @@ tracer = trace.get_tracer(__name__)
 
 endpoint_id = os.environ["RUNPOD_ENDPOINT_ID"]
 URI = f"https://api.runpod.ai/v2/{endpoint_id}/run"
+api_key =os.environ['RUNPOD_AI_API_KEY']
 
 def run(prompt, stream=True):
     with tracer.start_as_current_span("run") as span:
         span.set_attribute("prompt", prompt)
-        span.set_attribute("stream", stream)
 
         request = {
             'prompt': prompt,
@@ -43,7 +44,7 @@ def run(prompt, stream=True):
         }
 
         headers = {
-            "Authorization": f"Bearer {os.environ['RUNPOD_AI_API_KEY']}"
+            "Authorization": f"Bearer {api_key}"
         }
 
         try:
@@ -111,15 +112,38 @@ def cancel_task(task_id):
             span.record_exception(e)
             raise
 
+
+def standalone_question(query="What is a spotlist?",chat_history="", max_tokens=1000): 
+    
+    prompt= f"""Create a SINGLE standalone question. The question should be based on the New question plus the Chat history. 
+    If the New question can stand on its own you should return the New question. New question: \"{q}\", Chat history: \"{chat_history}\".""",
+    with tracer.start_as_current_span("standalone question") as span:
+        span.set_attribute("prompt", prompt)
+        try:
+            URI = f"https://api.runpod.ai/v2/{endpoint_id}/runsync"
+            headers = {
+                "Authorization": f"Bearer {api_key}"
+            }
+            q="What is a spotlist?"
+            chat_history=""
+            max_tokens=1000
+            # prompt= f"""Create a SINGLE standalone question. The question should be based on the New question plus the Chat history. 
+            #     If the New question can stand on its own you should return the New question. New question: \"{q}\", Chat history: \"{chat_history}\".""",
+            prompt="Just send me a random quote"
+            request = {
+                'prompt': prompt,
+                "sampling_params": {
+                    "max_tokens": max_tokens
+                }
+            }
+            response = requests.post(URI, json=dict(input=request), headers=headers)
+            response_data = response.json()
+            output_text = response_data['output'][0]['choices'][0]['tokens'][0]
+            return output_text
+
+        except Exception as e:
+            span.record_exception(e)
+            raise
+
 if __name__ == '__main__':
-    prompt = "Hello, how are you?"
-    start = time.time()
-
-    # Call `run` to initiate the process
-    generator = run(prompt)
-
-    # Iterate over the yielded messages and print them
-    for message in generator:
-        print(message, end='', flush=True)  # Print each chunk as it is streamed
-
-    print("\nTime taken: ", time.time() - start, " seconds")
+    standalone_question()

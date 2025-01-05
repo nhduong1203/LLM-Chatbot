@@ -9,25 +9,18 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
-    session_id UUID PRIMARY KEY,
     user_id UUID,
+    conversation_id UUID PRIMARY KEY,
     started_at TIMESTAMP,
-    ended_at TIMESTAMP
+    PRIMARY KEY (user_id, conversation_id)
 );
 
 CREATE TABLE IF NOT EXISTS messages (
-    session_id UUID,
-    message_id TIMEUUID,
-    sender TEXT,  // 'user' hoặc 'bot'
+    user_id UUID,
+    conversation_id TIMEUUID,
+    role TEXT, 
     message TEXT,
     timestamp TIMESTAMP,
-    PRIMARY KEY (session_id, message_id)
+    PRIMARY KEY (user_id, conversation_id)
 );
 
-CREATE TABLE IF NOT EXISTS user_sessions (
-    user_id UUID,
-    session_id UUID,
-    started_at TIMESTAMP,
-    ended_at TIMESTAMP,
-    PRIMARY KEY (user_id, session_id)
-) WITH CLUSTERING ORDER BY (session_id DESC);
