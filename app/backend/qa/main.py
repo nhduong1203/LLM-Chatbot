@@ -28,9 +28,6 @@ provider.add_span_processor(BatchSpanProcessor(jaeger_exporter))
 trace.set_tracer_provider(provider)
 tracer = trace.get_tracer(__name__)
 
-app = FastAPI()
-rag = GenerateRAGAnswer()
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,  # Default log level
@@ -40,6 +37,9 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+app = FastAPI()
+rag = GenerateRAGAnswer()
 
 @app.post("/message")
 async def message_response(

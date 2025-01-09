@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS sessions (
     user_id UUID,
-    conversation_id UUID PRIMARY KEY,
+    conversation_id UUID,
     started_at TIMESTAMP,
     PRIMARY KEY (user_id, conversation_id)
 );

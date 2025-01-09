@@ -15,7 +15,7 @@ RUN apt-get update && \
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set environment variable
+# Set environment variable for application home
 ENV HOME=/app
 
 # Start Redis and then your application

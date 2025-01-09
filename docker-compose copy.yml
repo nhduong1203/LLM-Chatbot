@@ -73,11 +73,13 @@ services:
     environment:
       - JAEGER_AGENT_HOST=jaeger
       - JAEGER_AGENT_PORT=${JAEGER_AGENT_PORT}
+      - DOC_API_URL=http://doc_management_api:${DOC_FASTAPI_PORT}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CASSANDRA_PORT=9042
       - CASSANDRA_HOST=cassandra
     depends_on:
+      - doc_management_api
       - redis
       - cassandra
 

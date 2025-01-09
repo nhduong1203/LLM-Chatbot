@@ -1,17 +1,48 @@
 from cassandra.cluster import Cluster
-from cassandra.auth import PlainTextAuthProvider
 from datetime import datetime, timezone
 from uuid import uuid1
 from datetime import datetime
 import opentelemetry.trace as tracer
+import os
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,  # Default log level
+    format="%(asctime)s [%(levelname)s] %(message)s",  # Log format
+    handlers=[
+        logging.StreamHandler()  # Log to stdout (container best practice)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 class CassandraMessageStore:
-    def __init__(self, cassandra_host, keyspace, username=None, password=None):
-        auth_provider = PlainTextAuthProvider(username, password) if username and password else None
-        self.cluster = Cluster([cassandra_host], auth_provider=auth_provider)
+    def __init__(self, cassandra_host=None, cassandra_port=None, keyspace="mlops"):
+        # CASSANDRA_IP_ADDRESS or CASSANDRA_HOST
+        self.cassandra_host = cassandra_host or os.getenv("CASSANDRA_HOST", "localhost")
+        self.cassandra_port = cassandra_port or int(os.getenv("CASSANDRA_PORT", 9042))
+        self.cluster = Cluster([self.cassandra_host], port=self.cassandra_port)
         self.session = self.cluster.connect()
-        self.session.set_keyspace(keyspace)
+        # self.session.set_keyspace(keyspace)
+
+    def initialize_schema(self, cql_file_path):
+        """Executes the schema initialization script from the provided CQL file."""
+        try:
+            logger.info(f"Initializing schema from {cql_file_path}")
+            with open(cql_file_path, 'r') as file:
+                commands = file.read()
+            
+            # Split commands to execute them separately
+            for command in commands.split(';'):
+                command = command.strip()
+                if command:  # Ignore empty commands
+                    logger.info(f"Executing CQL: {command}")
+                    self.session.execute(command)
+            
+            logger.info("Schema initialization complete.")
+            self.session.set_keyspace("mlops")
+        except Exception as e:
+            logger.error(f"Failed to initialize schema: {e}")
+            raise
     
     def save_message(self, user_id, conversation_id, message, role , timestamp=None):
         with tracer.start_as_current_span("save_message") as span:

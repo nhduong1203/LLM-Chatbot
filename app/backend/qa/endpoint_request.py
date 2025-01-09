@@ -6,7 +6,6 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-import runpod
 
 # Configure OpenTelemetry Tracer
 resource = Resource(attributes={SERVICE_NAME: "runpod-client"})

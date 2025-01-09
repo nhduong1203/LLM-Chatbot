@@ -46,7 +46,7 @@ class GenerateRAGAnswer:
         self.redis_manager = RedisManager()
         self.cassandra_manager = CassandraMessageStore()
 
-    def gen_prompt(self, query, contexts=None, user_id="user123", chat_id="chat456") -> str:
+    def gen_prompt(self, query, contexts=None) -> str:
         with tracer.start_as_current_span("gen_prompt") as span:
             span.set_attribute("query", query)
             if contexts:
@@ -91,7 +91,6 @@ class GenerateRAGAnswer:
             contexts = self.redis_manager.retrieve_contexts(query, user_id, chat_id)
             final_query = standalone_question(query=query)
             final_prompt = self.gen_prompt(query=final_query, contexts=contexts, user_id=user_id, chat_id=chat_id)
-            
 
             final_response = ""
             for chunk in run(final_prompt, stream=True):
