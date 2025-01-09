@@ -112,8 +112,7 @@ def cancel_task(task_id):
             raise
 
 
-def standalone_question(query="What is a spotlist?",chat_history="", max_tokens=1000): 
-    
+def standalone_question(query="What is a spotlist?", q="", chat_history="", max_tokens=1000): 
     prompt= f"""Create a SINGLE standalone question. The question should be based on the New question plus the Chat history. 
     If the New question can stand on its own you should return the New question. New question: \"{q}\", Chat history: \"{chat_history}\".""",
     with tracer.start_as_current_span("standalone question") as span:

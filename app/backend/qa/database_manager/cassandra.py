@@ -2,7 +2,7 @@ from cassandra.cluster import Cluster
 from datetime import datetime, timezone
 from uuid import uuid1
 from datetime import datetime
-import opentelemetry.trace as tracer
+from opentelemetry import trace
 import os
 import logging
 
@@ -14,6 +14,7 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 class CassandraMessageStore:
     def __init__(self, cassandra_host=None, cassandra_port=None, keyspace="mlops"):
@@ -62,16 +63,16 @@ class CassandraMessageStore:
                 # Insert query
                 insert_query = """
                 INSERT INTO messages (user_id, conversation_id, role, message, timestamp)
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (?, ?, ?, ?, ?)
                 """
                 prepared = self.session.prepare(insert_query)
 
                 # Execute the query
                 self.session.execute(prepared, (user_id, conversation_id, role, message, timestamp))
-                print(f"Message saved: user_id={user_id}, conversation_id={conversation_id}")
+                logger.info(f"Message saved: user_id={user_id}, conversation_id={conversation_id}")
             except Exception as e:
                 span.record_exception(e)
-                print(f"Failed to save message: {e}")
+                logger.info(f"Failed to save message: {e}")
     
     def close(self):
         self.cluster.shutdown()

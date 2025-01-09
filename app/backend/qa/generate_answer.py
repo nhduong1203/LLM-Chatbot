@@ -2,13 +2,15 @@ import torch
 import os
 from database_manager import RedisManager, CassandraMessageStore
 from endpoint_request import run, standalone_question
-import time
+from datetime import datetime, timezone
+from datetime import datetime
 import logging
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
 
 # Configure logging
 logging.basicConfig(
@@ -87,10 +89,10 @@ class GenerateRAGAnswer:
     def generate_llm_answer(self, query, user_id="user123", chat_id="chat456"):
         with tracer.start_as_current_span("generate_llm_answer") as span:
             span.set_attribute("query", query)
-            query_time = time.time()
+            query_time = datetime.now(timezone.utc)
             contexts = self.redis_manager.retrieve_contexts(query, user_id, chat_id)
             final_query = standalone_question(query=query)
-            final_prompt = self.gen_prompt(query=final_query, contexts=contexts, user_id=user_id, chat_id=chat_id)
+            final_prompt = self.gen_prompt(query=final_query, contexts=contexts)
 
             final_response = ""
             for chunk in run(final_prompt, stream=True):
