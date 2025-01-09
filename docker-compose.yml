@@ -77,6 +77,8 @@ services:
       - REDIS_PORT=6379
       - CASSANDRA_PORT=9042
       - CASSANDRA_HOST=cassandra
+    volumes:
+      - ./init.cql:/init.cql
     depends_on:
       - redis
       - cassandra

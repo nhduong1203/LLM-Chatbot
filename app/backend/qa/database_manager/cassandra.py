@@ -22,6 +22,7 @@ class CassandraMessageStore:
         self.cassandra_port = cassandra_port or int(os.getenv("CASSANDRA_PORT", 9042))
         self.cluster = Cluster([self.cassandra_host], port=self.cassandra_port)
         self.session = self.cluster.connect()
+        self.initialize_schema(cql_file_path="./init.cql")
         # self.session.set_keyspace(keyspace)
 
     def initialize_schema(self, cql_file_path):
