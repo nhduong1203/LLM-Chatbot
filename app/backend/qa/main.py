@@ -3,12 +3,13 @@ from typing import List, Optional
 import os
 import logging
 from generate_answer import GenerateRAGAnswer
-from fastapi.responses import StreamingResponse
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import json
 
 # Configure OpenTelemetry Tracer
 resource = Resource(attributes={SERVICE_NAME: "chat-service"})
@@ -41,27 +42,39 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 rag = GenerateRAGAnswer()
 
-@app.post("/message")
-async def message_response(
-    user_id: str = Form(...),
-    chat_id: str = Form(...),
-    message: str = Form(...),
-    timestamp: float = Form(...),
-):
-    with tracer.start_as_current_span("message") as span:
-        span.set_attribute("user_id", user_id)
-        span.set_attribute("chat_id", chat_id)
-        span.set_attribute("message", message)
-        span.set_attribute("timestamp", timestamp)
+@app.websocket("/ws/{user_id}")
+async def websocket_message_response(websocket: WebSocket, user_id: str):
+    await websocket.accept()
+    
+    try:
+        while True:
+            # Receive a message from the client (e.g., chat_id, message, timestamp)
+            data = await websocket.receive_text()
+            # Assuming the message is a JSON string with fields chat_id, message, timestamp
+            message_data = json.loads(data)
+            chat_id = message_data["chat_id"]
+            message = message_data["message"]
+            
+            with tracer.start_as_current_span("message") as span:
+                span.set_attribute("user_id", user_id)
+                span.set_attribute("chat_id", chat_id)
+                span.set_attribute("message", message)
 
-        try:
-            # Generate an LLM answer using RAG
-            # The generator end when the function that create the generator end.
-            generator = rag.generate_llm_answer(query=message, user_id=user_id, chat_id=chat_id)
-            return StreamingResponse(generator, media_type="text/event-stream")
-        except Exception as e:
-            span.record_exception(e)
-            logger.error(f"Error generating response: {e}")
-            raise
+                try:
+                    # Generate an LLM answer using RAG (or any other method)
+                    generator = rag.generate_llm_answer(query=message, user_id=user_id, chat_id=chat_id)
 
+                    # Stream responses to the WebSocket client
+                    async for answer in generator:
+                        await websocket.send_text(answer)
 
+                    websocket.send_text("/end")
+
+                except Exception as e:
+                    span.record_exception(e)
+                    logger.error(f"Error generating response: {e}")
+                    await websocket.send_text("Error generating response")
+                    break
+
+    except WebSocketDisconnect:
+        logger.info(f"Client {user_id} disconnected")

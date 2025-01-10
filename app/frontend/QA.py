@@ -107,9 +107,9 @@ if prompt := st.chat_input("Ask your question:"):
 
         # Generate a simulated response
         with st.chat_message("assistant"):
-            answer = st.write_stream(
-                send_message(user_id="user123", chat_id="chat456", message=prompt)
-            )
+            place_holders = st.empty()
+            for answer in send_message(user_id="user123", chat_id="chat456", message=message):
+                place_holders.markdown(answer)
             st.session_state.messages.append(
                 {
                     "role": "assistant",

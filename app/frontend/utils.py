@@ -3,7 +3,7 @@ import time
 import os
 import json
 import httpx
-
+import streamlit as st
 import logging
 
 # Configure logging
@@ -61,39 +61,69 @@ async def process_document(user_id, chat_id, upload_option, url=None, uploaded_f
     except requests.exceptions.RequestException as e:
         return {"status": "error", "message": str(e)}
     
-def send_message(user_id, chat_id, message):
+import asyncio
+import websockets
+import time
+import json
+
+import websockets
+import asyncio
+
+async def send_message(user_id, chat_id, message):
     """
-    Sends a request to the upload endpoint to process documents or URLs.
+    Sends a message via WebSocket to the server and streams the response.
 
     Args:
         user_id (str): The user ID.
         chat_id (str): The chat ID.
-        upload_option (str): The type of upload (URL or File).
-        url (str, optional): The URL to be processed.
-        uploaded_files (list, optional): List of uploaded file objects.
+        message (str): The message to send.
 
-    Returns:
-        dict: The API response in JSON format.
+    Yields:
+        str: The server's response as it is received.
     """
-    CHAT_API_URL = f'{NGINX_URL}/message'
-    headers = {"Accept": "application/json"}
+    uri = f"{NGINX_URL}/ws/{user_id}"  # Ensure NGINX_URL is properly defined
+    try:
+        async with websockets.connect(uri) as websocket:
+            # Send the message as a JSON payload
+            payload = {
+                "chat_id": chat_id,
+                "message": message
+            }
+            await websocket.send(json.dumps(payload))
 
-    # logger.info(f"files: {files}")
-    data = {
-        "user_id": user_id,
-        "chat_id": chat_id,
-        "message": message,
-        "timestamp": time.time(),
-    }
+            # Listen for server responses
+            full_response = ""
+            while True:
+                try:
+                    # Receive the next token from the server
+                    token = await websocket.recv()
+                    
+                    if token == "/end":
+                        break  # End of message stream
+                    
+                    full_response += token  # Accumulate tokens
+                    yield full_response  # Yield the accumulated response incrementally
+                except websockets.ConnectionClosedError:
+                    st.error("WebSocket connection closed unexpectedly.")
+                    break
+    except Exception as e:
+        # Log error for debugging
+        st.error(f"An error occurred: {e}")
 
-    with httpx.stream('POST', CHAT_API_URL, data=data, headers=headers, timeout=None) as r:
-        if r.status_code != 200:
-            raise Exception(f"Error: {r.status_code}, {r.text}")
-        
-        for line in r.iter_text():
-            yield line
-            time.sleep(0.05)
 
+from typing import AsyncGenerator
+def to_sync_generator(async_gen: AsyncGenerator):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        while True:
+            try:
+                yield loop.run_until_complete(anext(async_gen))
+            except StopAsyncIteration:
+                break
+    finally:
+        loop.close()
 
 def testing():
     CHAT_API_URL = f'{NGINX_URL}/test'
