@@ -37,7 +37,7 @@ async def process_document(user_id, chat_id, upload_option, url=None, uploaded_f
     Returns:
         dict: The API response in JSON format.
     """
-    DOC_VECTORDB_API_URL = f'{NGINX_URL}/upload'
+    DOC_VECTORDB_API_URL = f'http://{NGINX_URL}/upload'
 
     files = []
     if uploaded_files:
@@ -68,8 +68,11 @@ import json
 
 import websockets
 import asyncio
+import json
+from websockets.sync.client import connect
+import streamlit as st  # Assuming `st` is from Streamlit
 
-async def send_message(user_id, chat_id, message):
+def send_message(user_id, chat_id, message):
     """
     Sends a message via WebSocket to the server and streams the response.
 
@@ -81,34 +84,33 @@ async def send_message(user_id, chat_id, message):
     Yields:
         str: The server's response as it is received.
     """
-    uri = f"{NGINX_URL}/ws/{user_id}"  # Ensure NGINX_URL is properly defined
+
+    uri = f"ws://{NGINX_URL}/ws/{user_id}"  # Ensure NGINX_URL is properly defined
+
     try:
-        async with websockets.connect(uri) as websocket:
+        with connect(uri) as websocket:
             # Send the message as a JSON payload
             payload = {
                 "chat_id": chat_id,
                 "message": message
             }
-            await websocket.send(json.dumps(payload))
+            websocket.send(json.dumps(payload))
 
-            # Listen for server responses
-            full_response = ""
             while True:
                 try:
                     # Receive the next token from the server
-                    token = await websocket.recv()
-                    
+                    token = websocket.recv()
                     if token == "/end":
                         break  # End of message stream
-                    
-                    full_response += token  # Accumulate tokens
-                    yield full_response  # Yield the accumulated response incrementally
-                except websockets.ConnectionClosedError:
-                    st.error("WebSocket connection closed unexpectedly.")
+
+                    yield token  # Yield the accumulated response incrementally
+                except Exception as e:
+                    st.error(f"Error during WebSocket communication: {e}")
                     break
     except Exception as e:
         # Log error for debugging
         st.error(f"An error occurred: {e}")
+
 
 
 from typing import AsyncGenerator
@@ -126,7 +128,7 @@ def to_sync_generator(async_gen: AsyncGenerator):
         loop.close()
 
 def testing():
-    CHAT_API_URL = f'{NGINX_URL}/test'
+    CHAT_API_URL = f'http://{NGINX_URL}/test'
     headers = {"Accept": "application/json"}
 
     with httpx.stream('POST', CHAT_API_URL, headers=headers, timeout=None) as r:

@@ -92,7 +92,7 @@ services:
     environment:
       - JAEGER_AGENT_HOST=jaeger
       - JAEGER_AGENT_PORT=${JAEGER_AGENT_PORT}
-      - NGINX_URL=http://nginx:${NGINX_PORT}
+      - NGINX_URL=nginx:${NGINX_PORT}
     command: ["streamlit", "run", "QA.py", "--server.port", "${FRONTEND_PORT}"]
     depends_on:
       - doc_management_api

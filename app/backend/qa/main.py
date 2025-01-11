@@ -42,14 +42,27 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 rag = GenerateRAGAnswer()
 
+class UserState:
+    """Maintains state for a single user."""
+    def __init__(self):
+        self.counter = 0  # Example state: a counter
+
+    def increment_counter(self):
+        self.counter += 1
+        return self.counter
+
 @app.websocket("/ws/{user_id}")
 async def websocket_message_response(websocket: WebSocket, user_id: str):
+    user_state = UserState()
     await websocket.accept()
     
     try:
         while True:
             # Receive a message from the client (e.g., chat_id, message, timestamp)
             data = await websocket.receive_text()
+            # ---------------------------------------------------------------------
+            new_counter_value = user_state.increment_counter()
+            logger.info("New stateful counter: ", new_counter_value)
             # Assuming the message is a JSON string with fields chat_id, message, timestamp
             message_data = json.loads(data)
             chat_id = message_data["chat_id"]
@@ -65,10 +78,10 @@ async def websocket_message_response(websocket: WebSocket, user_id: str):
                     generator = rag.generate_llm_answer(query=message, user_id=user_id, chat_id=chat_id)
 
                     # Stream responses to the WebSocket client
-                    async for answer in generator:
+                    for answer in generator:
                         await websocket.send_text(answer)
 
-                    websocket.send_text("/end")
+                    await websocket.send_text("/end")
 
                 except Exception as e:
                     span.record_exception(e)
