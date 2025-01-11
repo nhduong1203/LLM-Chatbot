@@ -38,29 +38,34 @@ api_key = os.environ.get("OPENAI_API_KEY")
 model = "gpt-3.5-turbo"
 openai.api_key = api_key
 
-def get_openai_stream_response(message, max_tokens=150):
+def get_openai_stream_response(message, context=None, max_tokens=250):
     """
     Sends a request to OpenAI's API and retrieves the response in streaming mode for chat models.
 
     Parameters:
-        api_key (str): Your OpenAI API key.
-        model (str): The model to use (e.g., 'gpt-4', 'gpt-3.5-turbo').
-        messages (list): A list of messages for the chat model in the format [{"role": "user", "content": "Your message"}].
+        message (str): The user's input message.
+        context (str, optional): Additional context information to provide to the assistant.
         max_tokens (int): The maximum number of tokens to generate (default is 150).
 
     Returns:
-        None: Prints the response in a streaming manner.
+        Generator: Yields chunks of the response content in a streaming manner.
     """
-
+    # Base system prompt
     messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": message}
+        {"role": "system", "content": "You are a helpful assistant."}
     ]
+
+    # Include context if provided
+    if context:
+        messages.append({"role": "system", "content": f"Context: {context}"})
+
+    # Add the user message
+    messages.append({"role": "user", "content": message})
 
     try:
         # Sending request to OpenAI's API
         response = openai.ChatCompletion.create(
-            model=model,
+            model="gpt-4",  # Specify the model
             messages=messages,
             max_tokens=max_tokens,
             stream=True  # Enable streaming response

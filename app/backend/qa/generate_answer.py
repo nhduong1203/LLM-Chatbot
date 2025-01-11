@@ -1,7 +1,7 @@
 import torch
 import os
 from database_manager import RedisManager, CassandraMessageStore
-from endpoint_request import run, standalone_question
+from endpoint_request import run, standalone_question, get_openai_stream_response
 from datetime import datetime, timezone
 from datetime import datetime
 import logging
@@ -48,43 +48,43 @@ class GenerateRAGAnswer:
         self.redis_manager = RedisManager()
         self.cassandra_manager = CassandraMessageStore()
 
-    def gen_prompt(self, query, contexts=None) -> str:
-        with tracer.start_as_current_span("gen_prompt") as span:
-            span.set_attribute("query", query)
-            if contexts:
-                context_texts = [ctx["text"] for ctx in contexts]
-                context = "\n\n".join(context_texts)
-                prompt_template = (
-                    """
-                    You are a powerful chatbot designed to assist students by answering their questions.
-                    Given the following relevant information from the provided context (delimited by <info></info>):
+    # def gen_prompt(self, query, contexts=None) -> str:
+    #     with tracer.start_as_current_span("gen_prompt") as span:
+    #         span.set_attribute("query", query)
+    #         if contexts:
+    #             context_texts = [ctx["text"] for ctx in contexts]
+    #             context = "\n\n".join(context_texts)
+    #             prompt_template = (
+    #                 """
+    #                 You are a powerful chatbot designed to assist students by answering their questions.
+    #                 Given the following relevant information from the provided context (delimited by <info></info>):
 
-                    <info>
-                    {context}
-                    </info>
+    #                 <info>
+    #                 {context}
+    #                 </info>
 
-                    Please ensure the answer is friendly, helpful, and accurate. If the information provided is insufficient to answer the question, request clarification or specify what additional details are needed.
+    #                 Please ensure the answer is friendly, helpful, and accurate. If the information provided is insufficient to answer the question, request clarification or specify what additional details are needed.
 
-                    Question: {query}
-                    Answer:
-                    """
-                ).format(context=context, query=query)
-            else:
-                prompt_template = (
-                    """
-                    You are a powerful chatbot designed to assist students by answering their questions.
+    #                 Question: {query}
+    #                 Answer:
+    #                 """
+    #             ).format(context=context, query=query)
+    #         else:
+    #             prompt_template = (
+    #                 """
+    #                 You are a powerful chatbot designed to assist students by answering their questions.
 
-                    Please answer the question below using your general knowledge. If the question cannot be answered based on the given information, kindly ask the student for clarification or specify what additional details are required.
+    #                 Please answer the question below using your general knowledge. If the question cannot be answered based on the given information, kindly ask the student for clarification or specify what additional details are required.
 
-                    Question: {query}
-                    Answer:
-                    """
-                ).format(query=query)
+    #                 Question: {query}
+    #                 Answer:
+    #                 """
+    #             ).format(query=query)
 
 
-            span.set_attribute("prompt_length", len(prompt_template))
-            logger.info(prompt_template)
-            return prompt_template
+    #         span.set_attribute("prompt_length", len(prompt_template))
+    #         logger.info(prompt_template)
+    #         return prompt_template
 
     def generate_llm_answer(self, query, user_id="user123", chat_id="chat456"):
         with tracer.start_as_current_span("generate_llm_answer") as span:
@@ -92,10 +92,10 @@ class GenerateRAGAnswer:
             query_time = datetime.now(timezone.utc)
             contexts = self.redis_manager.retrieve_contexts(query, user_id, chat_id)
             final_query = standalone_question(query=query)
-            final_prompt = self.gen_prompt(query=final_query, contexts=contexts)
+            # final_prompt = self.gen_prompt(query=final_query, contexts=contexts)
 
             final_response = ""
-            for chunk in run(final_prompt, stream=True):
+            for chunk in get_openai_stream_response(message=final_query, context=contexts):
                 yield chunk
                 final_response += chunk
             self.cassandra_manager.save_message(user_id=user_id, conversation_id=chat_id, message=query, role="User", timestamp=query_time)
