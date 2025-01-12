@@ -52,6 +52,7 @@ class UserState:
         self.counter += 1
         return self.counter
 import asyncio
+
 @app.websocket("/ws/{user_id}")
 async def websocket_message_response(websocket: WebSocket, user_id: str):
     user_state = UserState()
