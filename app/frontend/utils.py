@@ -72,7 +72,7 @@ import json
 from websockets.sync.client import connect
 import streamlit as st  # Assuming `st` is from Streamlit
 
-def send_message(user_id, chat_id, message):
+def send_message(ws_connection, user_id, chat_id, message):
     """
     Sends a message via WebSocket to the server and streams the response.
 
@@ -85,31 +85,26 @@ def send_message(user_id, chat_id, message):
         str: The server's response as it is received.
     """
 
-    uri = f"ws://{NGINX_URL}/ws/{user_id}"  # Ensure NGINX_URL is properly defined
-
     try:
-        with connect(uri) as websocket:
-            # Send the message as a JSON payload
-            payload = {
-                "chat_id": chat_id,
-                "message": message
-            }
-            websocket.send(json.dumps(payload))
+    
+        payload = {
+            "type": "ms",
+            "user_id": user_id,
+            "chat_id": chat_id,
+            "message": message
+        }
+        ws_connection.send(json.dumps(payload))
 
-            while True:
-                try:
-                    # Receive the next token from the server
-                    token = websocket.recv()
-                    if token == "/end":
-                        break  # End of message stream
-
-                    yield token  # Yield the accumulated response incrementally
-                except Exception as e:
-                    st.error(f"Error during WebSocket communication: {e}")
-                    break
+        # Stream the response without closing the connection
+        while True:
+            response = ws_connection.recv()
+            if response == "/end":  # End marker, exit the loop but keep the connection alive
+                break
+            yield response
     except Exception as e:
-        # Log error for debugging
-        st.error(f"An error occurred: {e}")
+        # Log the error and reset the connection
+        st.session_state.ws_connection = None  # Clear the connection to force reconnection
+        raise Exception(f"WebSocket error: {e}")
 
 
 

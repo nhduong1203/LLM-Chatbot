@@ -6,7 +6,7 @@ import os
 if "keep_alive_started" not in st.session_state:
     st.session_state["keep_alive_started"] = False
 if "nginx_url" not in st.session_state:
-    st.session_state["nginx_url"] = os.getenv("NGINX_URL")
+    st.session_state["nginx_url"] = "localhost:80"
 
 def connect_websocket(user_id):
     try:
