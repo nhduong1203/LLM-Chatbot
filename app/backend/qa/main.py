@@ -46,11 +46,12 @@ class UserState:
     """Maintains state for a single user."""
     def __init__(self):
         self.counter = 0  # Example state: a counter
+        self.history_init = True
 
     def increment_counter(self):
         self.counter += 1
         return self.counter
-
+import asyncio
 @app.websocket("/ws/{user_id}")
 async def websocket_message_response(websocket: WebSocket, user_id: str):
     user_state = UserState()
@@ -59,14 +60,20 @@ async def websocket_message_response(websocket: WebSocket, user_id: str):
     try:
         while True:
             # Receive a message from the client (e.g., chat_id, message, timestamp)
-            data = await websocket.receive_text()
+            data = await asyncio.wait_for(websocket.receive_text(), timeout=30)
             # ---------------------------------------------------------------------
-            new_counter_value = user_state.increment_counter()
-            logger.info("New stateful counter: ", new_counter_value)
+            # new_counter_value = user_state.increment_counter()
+            # logger.info(f"New stateful counter: {new_counter_value}")
+            # logger.info(f"Data: {data}")
             # Assuming the message is a JSON string with fields chat_id, message, timestamp
             message_data = json.loads(data)
             chat_id = message_data["chat_id"]
             message = message_data["message"]
+
+
+            # await websocket.send_text(f"New stateful counter: {new_counter_value}")
+            # await websocket.send_text(f"/end")
+
             
             with tracer.start_as_current_span("message") as span:
                 span.set_attribute("user_id", user_id)
@@ -75,7 +82,8 @@ async def websocket_message_response(websocket: WebSocket, user_id: str):
 
                 try:
                     # Generate an LLM answer using RAG (or any other method)
-                    generator = rag.generate_llm_answer(query=message, user_id=user_id, chat_id=chat_id)
+                    generator = rag.generate_llm_answer(query=message, user_id=user_id, conversation_id=chat_id, history_init=user_state.history_init)
+                    user_state.history_init = False
 
                     # Stream responses to the WebSocket client
                     for answer in generator:

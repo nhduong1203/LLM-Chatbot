@@ -1,7 +1,7 @@
 import torch
 import os
 from database_manager import RedisManager, CassandraMessageStore
-from endpoint_request import run, standalone_question, get_openai_stream_response
+from endpoint_request import standalone_question, get_openai_stream_response
 from datetime import datetime, timezone
 from datetime import datetime
 import logging
@@ -47,57 +47,28 @@ class GenerateRAGAnswer:
     def __init__(self):
         self.redis_manager = RedisManager()
         self.cassandra_manager = CassandraMessageStore()
+        self.history_array = []
 
-    # def gen_prompt(self, query, contexts=None) -> str:
-    #     with tracer.start_as_current_span("gen_prompt") as span:
-    #         span.set_attribute("query", query)
-    #         if contexts:
-    #             context_texts = [ctx["text"] for ctx in contexts]
-    #             context = "\n\n".join(context_texts)
-    #             prompt_template = (
-    #                 """
-    #                 You are a powerful chatbot designed to assist students by answering their questions.
-    #                 Given the following relevant information from the provided context (delimited by <info></info>):
-
-    #                 <info>
-    #                 {context}
-    #                 </info>
-
-    #                 Please ensure the answer is friendly, helpful, and accurate. If the information provided is insufficient to answer the question, request clarification or specify what additional details are needed.
-
-    #                 Question: {query}
-    #                 Answer:
-    #                 """
-    #             ).format(context=context, query=query)
-    #         else:
-    #             prompt_template = (
-    #                 """
-    #                 You are a powerful chatbot designed to assist students by answering their questions.
-
-    #                 Please answer the question below using your general knowledge. If the question cannot be answered based on the given information, kindly ask the student for clarification or specify what additional details are required.
-
-    #                 Question: {query}
-    #                 Answer:
-    #                 """
-    #             ).format(query=query)
-
-
-    #         span.set_attribute("prompt_length", len(prompt_template))
-    #         logger.info(prompt_template)
-    #         return prompt_template
-
-    def generate_llm_answer(self, query, user_id="user123", chat_id="chat456"):
+    def generate_llm_answer(self, query, user_id="user123", conversation_id="chat456", history_init=True):
         with tracer.start_as_current_span("generate_llm_answer") as span:
             span.set_attribute("query", query)
             query_time = datetime.now(timezone.utc)
-            contexts = self.redis_manager.retrieve_contexts(query, user_id, chat_id)
-            final_query = standalone_question(query=query)
-            # final_prompt = self.gen_prompt(query=final_query, contexts=contexts)
+            contexts = self.redis_manager.retrieve_contexts(query, user_id, conversation_id)
+            if history_init:
+                self.history_array = self.cassandra_manager.get_chat_history(conversation_id=conversation_id)
+
+            chat_history = "\n".join(self.history_array)
+            final_query = standalone_question(query=query, chat_history=chat_history)
 
             final_response = ""
             for chunk in get_openai_stream_response(message=final_query, context=contexts):
                 yield chunk
                 final_response += chunk
-            self.cassandra_manager.save_message(user_id=user_id, conversation_id=chat_id, message=query, role="User", timestamp=query_time)
-            self.cassandra_manager.save_message(user_id=user_id, conversation_id=chat_id, message=final_response, role="Bot")
+            
+            self.chat_history.append(f"user: {query}")
+            self.chat_history.append(f"assistant: {final_response}")
+            self.chat_history = self.chat_history[2:]
+
+            self.cassandra_manager.save_message(user_id=user_id, conversation_id=conversation_id, message=query, role="User", timestamp=query_time)
+            self.cassandra_manager.save_message(user_id=user_id, conversation_id=conversation_id, message=final_response, role="Bot")
 

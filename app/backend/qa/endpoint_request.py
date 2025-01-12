@@ -79,8 +79,8 @@ def get_openai_stream_response(message, context=None, max_tokens=250):
                 if 'content' in delta:
                     yield delta['content']
 
-    except openai.error.OpenAIError as e:
-        print(f"An error occurred: {e}")
+    except Exception as e:
+        raise Exception(f"An unexpected error occurred: {e}")
 
 
 def standalone_question(query="", chat_history="", max_tokens=1000):
@@ -113,8 +113,8 @@ def standalone_question(query="", chat_history="", max_tokens=1000):
         output_text = response["choices"][0]["message"]["content"].strip()
         return output_text
 
-    except openai.error.OpenAIError as e:
-        raise Exception(f"An error occurred: {e}")
+    except Exception as e:
+        raise Exception(f"An unexpected error occurred: {e}")
 
 if __name__ == '__main__':
     standalone_question()

@@ -45,6 +45,43 @@ class CassandraMessageStore:
         except Exception as e:
             logger.error(f"Failed to initialize schema: {e}")
             raise
+
+    def get_chat_history(self, conversation_id, limit=4):
+        try:
+            # Query to retrieve the latest messages sorted by timestamp in ascending order (chat history format)
+            query = """
+            SELECT user_id, conversation_id, role, message, timestamp 
+            FROM messages 
+            WHERE conversation_id = ?
+            ORDER BY timestamp ASC 
+            LIMIT ?;
+            """
+            
+            # Execute the query
+            prepared = self.session.prepare(query)
+            rows = self.session.execute(prepared, (conversation_id, limit))
+
+            # Convert the rows to a list of dictionaries for easier handling
+            chat_history = [
+                {
+                    "user_id": row.user_id,
+                    "conversation_id": row.conversation_id,
+                    "role": row.role,
+                    "message": row.message,
+                    "timestamp": row.timestamp,
+                }
+                for row in rows
+            ]
+
+            # Format the chat history as an array of strings in the format "role: message"
+            formatted_history = [
+                f"{msg['role']}: {msg['message']}" for msg in chat_history
+            ]
+
+            return formatted_history
+        except Exception as e:
+            print(f"Failed to retrieve chat history: {e}")
+            return []
     
     def save_message(self, user_id, conversation_id, message, role , timestamp=None):
         with tracer.start_as_current_span("save_message") as span:

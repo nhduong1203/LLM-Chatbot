@@ -12,3 +12,4 @@ opentelemetry-sdk
 opentelemetry-exporter-jaeger-thrift
 cassandra-driver
 websockets
+openai==0.27.5
