@@ -1,16 +1,17 @@
-from fastapi import FastAPI, UploadFile, Form
-from typing import List, Optional
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from llm_call import GenerateRAGAnswer
+from database_manager import CassandraMessageStore
+import asyncio
 import os
 import logging
-from generate_answer import GenerateRAGAnswer
-from database_manager import CassandraMessageStore
+import json
+
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-import json
+
 
 # Configure OpenTelemetry Tracer
 resource = Resource(attributes={SERVICE_NAME: "chat-service"})
@@ -58,7 +59,7 @@ class UserState:
         return self.counter
 
 
-import asyncio
+
 
 @app.websocket("/ws/{user_id}")
 async def websocket_message_response(websocket: WebSocket, user_id: str):
@@ -68,16 +69,12 @@ async def websocket_message_response(websocket: WebSocket, user_id: str):
     try:
         while True:
             # Receive a message from the client (e.g., chat_id, message, timestamp)
-            data = await asyncio.wait_for(websocket.receive_text(), timeout=30)
+            data = await asyncio.wait_for(websocket.receive_text(), timeout=300)
             # ---------------------------------------------------------------------
             # Assuming the message is a JSON string with fields chat_id, message, timestamp
             message_data = json.loads(data)
             conversation_id = message_data["chat_id"]
             message = message_data["message"]
-
-
-            # await websocket.send_text(f"New stateful counter: {new_counter_value}")
-            # await websocket.send_text(f"/end")
 
             
             with tracer.start_as_current_span("message") as span:
