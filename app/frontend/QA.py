@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import sync_process_document, send_message
+from utils import sync_process_document, send_message, sync_delete_document
 from websocket import create_connection
 import os
 
@@ -34,11 +34,6 @@ def send_message_with_reconnect(ws_connection, user_id, chat_id, message, max_re
                 yield token  # Stream tokens to the interface
             break  # Exit the loop if successful
         except Exception as e:
-            # retries += 1
-            # if retries >= max_retries:
-            #     raise Exception(f"WebSocket error after {max_retries} retries: {e}")
-            # else:
-            #     st.warning(f"Connection lost. Retrying... ({retries}/{max_retries})")
             ws_connection = connect_websocket(user_id)  # Attempt to reconnect
 
 
@@ -47,20 +42,12 @@ def send_message_with_reconnect(ws_connection, user_id, chat_id, message, max_re
 st.set_page_config(layout="wide")
 
 # Initialize session state for chat history and references
-if "chat_history" not in st.session_state:
-    st.session_state["chat_history"] = []  # Stores chat conversation history
 if "references" not in st.session_state:
     st.session_state["references"] = []  # Stores reference documents or URLs
+if "upload_options" not in st.session_state:
+    st.session_state["upload_options"] = []
 if "messages" not in st.session_state:
     st.session_state["messages"] = []  # Chat messages history
-if "uploader_key" not in st.session_state:
-    st.session_state.uploader_key = 0
-if "contexts" not in st.session_state:
-    st.session_state.contexts = []
-
-
-def update_key():
-    st.session_state.uploader_key += 1
 
 # Streamlit app setup
 st.title("Multi-Document Chatbot")
@@ -69,31 +56,27 @@ st.sidebar.title("Manage Reference Documents")
 # Sidebar for document upload options
 upload_option = st.sidebar.radio("Add Reference Source", ("Website URL", "Upload Files"))
 
-
-
 # Handle document input
 if upload_option == "Website URL":
     url = st.sidebar.text_input("Enter Website URL:")
     if st.sidebar.button("Add URL"):
         if url:
             st.session_state["references"].append(f"URL: {url}")
+            st.session_state["upload_options"].append("Website URL")
             st.sidebar.success(f"Added URL: {url}")
 
             # TODO
             sync_process_document("user123", "chat456", "Website URL", url=url)
 
-
-
 elif upload_option == "Upload Files":
     uploaded_files = st.sidebar.file_uploader("Upload your files (txt/pdf):", type=["txt", "pdf"], accept_multiple_files=True)
     if st.sidebar.button("Add Files"):
         if uploaded_files:
-
             # TODO
             sync_process_document("user123", "chat456", "Upload Files", uploaded_files=uploaded_files)
-
             for uploaded_file in uploaded_files:
                 st.session_state["references"].append(f"File: {uploaded_file.name}")
+                st.session_state["upload_options"].append("Upload Files")
             st.sidebar.success(f"Added {len(uploaded_files)} files.")
 
 # Display current reference sources
@@ -105,7 +88,9 @@ if st.session_state["references"]:
             st.write(ref)
         with col2:
             if st.button("Remove", key=f"remove_{i}"):
+                sync_delete_document("user123", "chat456", upload_option=st.session_state["upload_options"][i], document_name=ref)
                 st.session_state["references"].pop(i)
+                st.session_state["upload_options"].pop(i)
                 st.sidebar.success(f"Removed: {ref}")
                 st.rerun()  # Refresh the sidebar to reflect the changes
 else:

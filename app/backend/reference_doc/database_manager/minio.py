@@ -43,9 +43,9 @@ class MinioManager:
 
         if upload_option == "Website URL" and url:
             # Handle URL uploads
-            object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/url.txt"
+            unique_id = hash(url)  # Generate a unique ID for the URL
+            object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/urls/{unique_id}.txt"
             try:
-                # Write URL to MinIO as a text file
                 url_content = url.encode("utf-8")
                 data = io.BytesIO(url_content)
                 self.minio_client.put_object(bucket_name, object_name, data, length=len(url_content))
@@ -83,3 +83,38 @@ class MinioManager:
         else:
             print("No valid upload option or data provided.")
             raise ValueError("Invalid upload option or no data to upload.")
+        
+    async def delete_from_minio(self, bucket_name, user_id, chat_id, file_name=None, upload_option=None):
+        """
+        Delete data from MinIO.
+
+        Args:
+            bucket_name: Name of the MinIO bucket.
+            user_id: ID of the user associated with the file.
+            chat_id: ID of the chat associated with the file.
+            file_name: Name of the file to delete (for "Upload Files").
+            upload_option: Type of upload (e.g., "Upload Files" or "Website URL").
+        """
+        try:
+            # Construct the object name based on the upload option
+            if upload_option == "Website URL":
+                unique_id = hash(file_name)  # Generate a unique ID for the URL
+                object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/urls/{unique_id}.txt"
+            elif upload_option == "Upload Files" and file_name:
+                object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/{file_name}"
+            else:
+                print("Invalid upload option or missing file name.")
+                raise ValueError("Invalid upload option or missing file name.")
+
+            # Check if the object exists
+            if not self.minio_client.stat_object(bucket_name, object_name):
+                print(f"Object '{object_name}' does not exist in bucket '{bucket_name}'.")
+                raise FileNotFoundError(f"Object '{object_name}' not found.")
+
+            # Delete the object from MinIO
+            self.minio_client.remove_object(bucket_name, object_name)
+            print(f"Object '{object_name}' deleted successfully from bucket '{bucket_name}'.")
+
+        except Exception as e:
+            print(f"Failed to delete object from MinIO: {e}")
+            raise

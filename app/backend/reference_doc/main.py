@@ -114,7 +114,7 @@ async def handle_upload(
                         if file_content:
                             chunks = chunker.process_file(file_content)
                             chunks_and_embeddings = embedder.embed_chunks(chunks)
-                            doc_id = f"{user_id}:{chat_id}:file:{uploaded_file.filename}"
+                            doc_id = f"{user_id}:{chat_id}:{hash(uploaded_file.filename)}"
                             redis_manager.store_chunks(doc_id, chunks_and_embeddings)
                             results.append({"filename": uploaded_file.filename, "status": "success", "message": "File processed and stored successfully."})
                         else:
@@ -128,5 +128,53 @@ async def handle_upload(
         else:
             span.record_exception(ValueError("No valid input provided."))
             return {"status": "error", "message": "No valid input provided."}
+        
+    # data = {
+    #     "user_id": user_id,
+    #     "chat_id": chat_id,
+    #     "url": upload_option,
+    #     "uploaded_file": uploaded_file
+    # }
+@app.delete("/remove_document")
+async def remove_document(user_id: str, chat_id: str, upload_option: str, document_name: str):
+    """Remove a document from MinIO and Redis based on its name."""
+    with tracer.start_as_current_span("remove_document") as span:
+        span.set_attribute("document_name", document_name)
+        span.set_attribute("upload_option", upload_option)
+        span.set_attribute("user_id", user_id)
+        span.set_attribute("chat_id", chat_id)
+
+        try:
+            bucket_name = "my-bucket"
+
+            # Remove from MinIO
+            with tracer.start_as_current_span("remove_from_minio") as minio_span:
+                minio_file_path = f"{user_id}/{chat_id}/{document_name}"
+                minio_span.set_attribute("file_path", minio_file_path)
+
+                try:
+                    minio_manager.delete_from_minio(bucket_name=bucket_name, user_id=user_id, chat_id=chat_id, file_name=document_name, upload_option=upload_option)
+                    minio_span.set_attribute("minio_status", "success")
+                except Exception as e:
+                    minio_span.record_exception(e)
+                    return {"status": "error", "message": f"Failed to remove document from MinIO: {e}"}
+
+            # Remove from Redis
+            with tracer.start_as_current_span("remove_from_redis") as redis_span:
+                doc_id = f"{user_id}:{chat_id}:{hash(document_name)}"
+                redis_span.set_attribute("doc_id", doc_id)
+
+                try:
+                    redis_manager.delete_chunks(doc_id)
+                    redis_span.set_attribute("redis_status", "success")
+                except Exception as e:
+                    redis_span.record_exception(e)
+                    return {"status": "error", "message": f"Failed to remove document from Redis: {e}"}
+
+            return {"status": "success", "message": f"Document '{document_name}' removed successfully."}
+
+        except Exception as e:
+            span.record_exception(e)
+            return {"status": "error", "message": str(e)}
 
 

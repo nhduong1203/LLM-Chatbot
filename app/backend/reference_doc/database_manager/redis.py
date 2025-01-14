@@ -55,7 +55,7 @@ class RedisVectorIndexManager:
             try:
                 pipeline = self.redis_client.pipeline()
                 for idx, (chunk, embedding) in enumerate(chunks_and_embeddings):
-                    key = f"reference:{doc_id}:chunk:{idx}"
+                    key = f"reference:{doc_id}:{idx}"
                     data_dict = {
                         "metadata": doc_id,
                         "text": chunk,
@@ -79,6 +79,38 @@ class RedisVectorIndexManager:
                 self.create_index(index_name)
             except Exception as e:
                 span.record_exception(e)
+                raise
+
+    def delete_chunks(self, doc_id):
+        """
+        Delete all chunks associated with a specific doc_id from Redis.
+
+        Args:
+            doc_id: The document ID whose chunks should be deleted.
+        """
+        with self.tracer.start_as_current_span("delete_chunks_from_redis") as span:
+            span.set_attribute("doc_id", doc_id)
+            try:
+                # Fetch all keys associated with the doc_id
+                pattern = f"reference:{doc_id}:*"
+                keys = self.redis_client.keys(pattern)
+
+                if not keys:
+                    span.add_event(f"No keys found for doc_id {doc_id}")
+                    print(f"No chunks found for doc_id {doc_id}.")
+                    return
+
+                # Delete all keys matching the pattern
+                pipeline = self.redis_client.pipeline()
+                for key in keys:
+                    pipeline.delete(key)
+
+                pipeline.execute()
+                span.add_event(f"Deleted all chunks for doc_id {doc_id}")
+                print(f"Deleted {len(keys)} chunks for doc_id {doc_id}.")
+            except Exception as e:
+                span.record_exception(e)
+                print(f"Failed to delete chunks for doc_id {doc_id}: {e}")
                 raise
 
 # Example Usage
