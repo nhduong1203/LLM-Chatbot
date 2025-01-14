@@ -1,19 +1,13 @@
 from fastapi import FastAPI, UploadFile, Form
 from typing import List, Optional
-from minio import Minio
 from PyPDF2 import PdfReader
-from embedder import Embedder
-from semantic_chunking import SemanticChunker
-import redis
-from redis_vectordb import store_chunks_in_redis
-from embedder import Embedder
+from document import Embedder, SemanticChunker
 from utils import crawl_website, convert_html_to_text
-import os
-import uvicorn
-import logging
-from utils import upload_to_minio
+from database_manager import RedisVectorIndexManager, MinioManager
 
-from opentelemetry import trace
+import os
+import logging
+
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -42,31 +36,10 @@ get_tracer_provider().add_span_processor(span_processor)
 # Initialize other components
 embedder = Embedder()
 chunker = SemanticChunker(embedder.model)
+redis_manager = RedisVectorIndexManager()
+minio_manager = MinioManager()
 
 app = FastAPI()
-redis_host = os.getenv("REDIS_HOST", "localhost")
-redis_port = int(os.getenv("REDIS_PORT", 6379))
-redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=False)
-
-# Initialize MinIO client
-minio_host = os.getenv("MINIO_HOST", "localhost")
-minio_port = os.getenv("MINIO_PORT", "9000")
-minio_access_key = os.getenv("MINIO_ACCESS_KEY", "admin")
-minio_secret_key = os.getenv("MINIO_SECRET_KEY", "admin123")
-minio_secure = False
-
-minio_client = Minio(
-    f"{minio_host}:{minio_port}",
-    access_key=minio_access_key,
-    secret_key=minio_secret_key,
-    secure=minio_secure
-)
-
-# Ensure bucket exists
-def ensure_bucket_exists(bucket_name: str):
-    with tracer.start_as_current_span("ensure_bucket_exists") as span:
-        if not minio_client.bucket_exists(bucket_name):
-            minio_client.make_bucket(bucket_name)
 
 # Configure logging
 logging.basicConfig(
@@ -91,20 +64,20 @@ async def handle_upload(
         span.set_attribute("user_id", user_id)
         span.set_attribute("chat_id", chat_id)
         bucket_name = "my-bucket"
-        ensure_bucket_exists(bucket_name)
+        minio_manager.ensure_bucket_exists(bucket_name)
         
 
         if url:
             with tracer.start_as_current_span("process_url") as url_span:
                 url_span.set_attribute("url", url)
-                await upload_to_minio(minio_client, bucket_name, user_id, chat_id, "Website URL", url=url)
+                await minio_manager.upload_to_minio(bucket_name, user_id, chat_id, "Website URL", url=url)
                 crawl_result = crawl_website(url)
                 if crawl_result['status'] == 'success':
                     plain_text = convert_html_to_text(crawl_result['content'])
                     chunks = chunker.process_file(plain_text)
                     chunks_and_embeddings = embedder.embed_chunks(chunks)
-                    doc_id = f"{user_id}:{chat_id}:url:{hash(url)}"
-                    store_chunks_in_redis(redis_client, doc_id, chunks_and_embeddings)
+                    doc_id = f"{user_id}:{chat_id}:{hash(url)}"
+                    redis_manager.store_chunks(doc_id, chunks_and_embeddings)
                     return {"status": "success", "message": "URL processed and stored successfully."}
                 else:
                     url_span.record_exception(Exception(crawl_result['error']))
@@ -113,7 +86,7 @@ async def handle_upload(
         results = []
 
         if uploaded_files:
-            await upload_to_minio(minio_client, bucket_name, user_id, chat_id, "Upload Files", uploaded_files=uploaded_files)
+            await minio_manager.upload_to_minio(bucket_name, user_id, chat_id, "Upload Files", uploaded_files=uploaded_files)
             for uploaded_file in uploaded_files:
                 with tracer.start_as_current_span("process_file") as file_span:
                     file_span.set_attribute("filename", uploaded_file.filename)
@@ -142,7 +115,7 @@ async def handle_upload(
                             chunks = chunker.process_file(file_content)
                             chunks_and_embeddings = embedder.embed_chunks(chunks)
                             doc_id = f"{user_id}:{chat_id}:file:{uploaded_file.filename}"
-                            store_chunks_in_redis(redis_client, doc_id, chunks_and_embeddings)
+                            redis_manager.store_chunks(doc_id, chunks_and_embeddings)
                             results.append({"filename": uploaded_file.filename, "status": "success", "message": "File processed and stored successfully."})
                         else:
                             results.append({"filename": uploaded_file.filename, "status": "error", "message": "Empty file content."})
