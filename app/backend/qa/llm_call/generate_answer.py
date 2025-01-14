@@ -1,7 +1,7 @@
 import torch
 import os
 from database_manager import RedisManager, CassandraMessageStore
-from endpoint_request import standalone_question, get_openai_stream_response
+from .endpoint_request import standalone_question, get_openai_stream_response
 from datetime import datetime, timezone
 from datetime import datetime
 import logging

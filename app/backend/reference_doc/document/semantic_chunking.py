@@ -1,7 +1,7 @@
 from nltk.tokenize import sent_tokenize
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-from document_preprocessor import TextPreprocessor
+from .document_preprocessor import TextPreprocessor
 
 
 class SemanticChunker:
