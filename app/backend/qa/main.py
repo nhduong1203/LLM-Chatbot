@@ -3,6 +3,7 @@ from typing import List, Optional
 import os
 import logging
 from generate_answer import GenerateRAGAnswer
+from database_manager import CassandraMessageStore
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
@@ -47,10 +48,16 @@ class UserState:
     def __init__(self):
         self.counter = 0  # Example state: a counter
         self.history_init = True
+        self.cassandra = CassandraMessageStore()
+
+    def retrieve_chat_history(self, conversation_id):
+        self.chat_history = self.cassandra.get_chat_history(conversation_id=conversation_id)
 
     def increment_counter(self):
         self.counter += 1
         return self.counter
+
+
 import asyncio
 
 @app.websocket("/ws/{user_id}")
@@ -63,12 +70,9 @@ async def websocket_message_response(websocket: WebSocket, user_id: str):
             # Receive a message from the client (e.g., chat_id, message, timestamp)
             data = await asyncio.wait_for(websocket.receive_text(), timeout=30)
             # ---------------------------------------------------------------------
-            # new_counter_value = user_state.increment_counter()
-            # logger.info(f"New stateful counter: {new_counter_value}")
-            # logger.info(f"Data: {data}")
             # Assuming the message is a JSON string with fields chat_id, message, timestamp
             message_data = json.loads(data)
-            chat_id = message_data["chat_id"]
+            conversation_id = message_data["chat_id"]
             message = message_data["message"]
 
 
@@ -78,13 +82,17 @@ async def websocket_message_response(websocket: WebSocket, user_id: str):
             
             with tracer.start_as_current_span("message") as span:
                 span.set_attribute("user_id", user_id)
-                span.set_attribute("chat_id", chat_id)
+                span.set_attribute("conversation_id", conversation_id)
                 span.set_attribute("message", message)
 
                 try:
                     # Generate an LLM answer using RAG (or any other method)
-                    generator = rag.generate_llm_answer(query=message, user_id=user_id, conversation_id=chat_id, history_init=user_state.history_init)
-                    user_state.history_init = False
+                    if user_state.history_init == True:
+                        user_state.history_init = False
+                        chat_history = user_state.retrieve_chat_history(conversation_id=conversation_id)
+                    generator = rag.generate_llm_answer(query=message, user_id=user_id, conversation_id=conversation_id, chat_history=chat_history)
+                    
+                    logger.info(chat_history)
 
                     # Stream responses to the WebSocket client
                     for answer in generator:

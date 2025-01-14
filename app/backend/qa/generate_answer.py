@@ -47,27 +47,25 @@ class GenerateRAGAnswer:
     def __init__(self):
         self.redis_manager = RedisManager()
         self.cassandra_manager = CassandraMessageStore()
-        self.history_array = []
 
-    def generate_llm_answer(self, query, user_id="user123", conversation_id="chat456", history_init=True):
+    def generate_llm_answer(self, query, user_id="user123", conversation_id="chat456", chat_history=None):
         with tracer.start_as_current_span("generate_llm_answer") as span:
             span.set_attribute("query", query)
             query_time = datetime.now(timezone.utc)
             contexts = self.redis_manager.retrieve_contexts(query, user_id, conversation_id)
-            if history_init:
-                self.history_array = self.cassandra_manager.get_chat_history(conversation_id=conversation_id)
 
-            chat_history = "\n".join(self.history_array)
-            final_query = standalone_question(query=query, chat_history=chat_history)
+
+            chat_history_joined = "\n".join(chat_history)
+            standalone_final_query = standalone_question(query=query, chat_history=chat_history_joined)
 
             final_response = ""
-            for chunk in get_openai_stream_response(message=final_query, context=contexts):
+            for chunk in get_openai_stream_response(message=standalone_final_query, context=contexts):
                 yield chunk
                 final_response += chunk
             
-            self.chat_history.append(f"user: {query}")
-            self.chat_history.append(f"assistant: {final_response}")
-            self.chat_history = self.chat_history[2:]
+            chat_history.append(f"user: {query}")
+            chat_history.append(f"assistant: {final_response}")
+            chat_history = chat_history[2:]
 
             self.cassandra_manager.save_message(user_id=user_id, conversation_id=conversation_id, message=query, role="User", timestamp=query_time)
             self.cassandra_manager.save_message(user_id=user_id, conversation_id=conversation_id, message=final_response, role="Bot")
