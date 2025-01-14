@@ -12,15 +12,20 @@ services:
       - CASSANDRA_CLUSTER_NAME=MyCluster
       - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
       - CASSANDRA_DC=datacenter1
+
+  cqlsh:
+    image: cassandra:latest
+    depends_on:
+      - cassandra
+    entrypoint: >
+      bash -c "
+      until cqlsh cassandra -e 'DESCRIBE KEYSPACES'; do
+        echo 'Waiting for Cassandra to be ready...';
+        sleep 5;
+      done;
+      cqlsh cassandra -f /scripts/init.cql"
     volumes:
       - ./init.cql:/scripts/init.cql
-    entrypoint: >
-      /bin/sh -c "
-      cassandra -R && 
-      until cqlsh -e 'DESCRIBE KEYSPACES'; do sleep 10; done; 
-      cqlsh -f /scripts/init.cql &&
-      tail -f /dev/null
-      "
 
   minio:
     container_name: minio

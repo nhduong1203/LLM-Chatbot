@@ -22,28 +22,7 @@ class CassandraMessageStore:
         self.cassandra_port = cassandra_port or int(os.getenv("CASSANDRA_PORT", 9042))
         self.cluster = Cluster([self.cassandra_host], port=self.cassandra_port)
         self.session = self.cluster.connect()
-        # self.initialize_schema(cql_file_path="./init.cql")
-        # self.session.set_keyspace(keyspace)
-
-    def initialize_schema(self, cql_file_path):
-        """Executes the schema initialization script from the provided CQL file."""
-        try:
-            logger.info(f"Initializing schema from {cql_file_path}")
-            with open(cql_file_path, 'r') as file:
-                commands = file.read()
-            
-            # Split commands to execute them separately
-            for command in commands.split(';'):
-                command = command.strip()
-                if command:  # Ignore empty commands
-                    logger.info(f"Executing CQL: {command}")
-                    self.session.execute(command)
-            
-            logger.info("Schema initialization complete.")
-            self.session.set_keyspace("mlops")
-        except Exception as e:
-            logger.error(f"Failed to initialize schema: {e}")
-            raise
+        self.session.set_keyspace(keyspace)
 
     def get_chat_history(self, conversation_id, limit=4):
         try:
