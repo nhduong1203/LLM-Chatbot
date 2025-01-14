@@ -18,12 +18,11 @@ tracer = trace.get_tracer(__name__)
 
 class CassandraMessageStore:
     def __init__(self, cassandra_host=None, cassandra_port=None, keyspace="mlops"):
-        # CASSANDRA_IP_ADDRESS or CASSANDRA_HOST
         self.cassandra_host = cassandra_host or os.getenv("CASSANDRA_HOST", "localhost")
         self.cassandra_port = cassandra_port or int(os.getenv("CASSANDRA_PORT", 9042))
         self.cluster = Cluster([self.cassandra_host], port=self.cassandra_port)
         self.session = self.cluster.connect()
-        self.initialize_schema(cql_file_path="./init.cql")
+        # self.initialize_schema(cql_file_path="./init.cql")
         # self.session.set_keyspace(keyspace)
 
     def initialize_schema(self, cql_file_path):

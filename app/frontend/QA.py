@@ -8,33 +8,45 @@ if "keep_alive_started" not in st.session_state:
 if "nginx_url" not in st.session_state:
     st.session_state["nginx_url"] = os.getenv("NGINX_URL")
 
-def connect_websocket(user_id):
+def connect_websocket(user_id, timeout=300):
+    """
+    Establish or reconnect to a WebSocket with a timeout.
+
+    Args:
+        user_id: The user ID for the WebSocket connection.
+        timeout: Timeout in seconds for the WebSocket connection. Default is 300 seconds.
+    """
     try:
+        # Check if a WebSocket connection exists or is not connected
         if "ws_connection" not in st.session_state or st.session_state.ws_connection is None:
-            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}")
+            st.session_state.ws_connection = create_connection(
+                f"ws://{st.session_state.nginx_url}/ws/{user_id}",
+                timeout=timeout
+            )
         elif not st.session_state.ws_connection.connected:
             st.session_state.ws_connection.close()
-            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}")
+            st.session_state.ws_connection = create_connection(
+                f"ws://{st.session_state.nginx_url}/ws/{user_id}",
+                timeout=timeout
+            )
     except Exception as e:
         st.session_state.ws_connection = None
         raise Exception(f"Failed to connect or reconnect to WebSocket: {e}")
+    
     return st.session_state.ws_connection
 
 
-def send_message_with_reconnect(ws_connection, user_id, chat_id, message, max_retries=3):
-    retries = 0
-    while retries < max_retries:
-        try:
-            # Ensure WebSocket connection is active
-            if not ws_connection.connected:
-                ws_connection = connect_websocket(user_id)
 
-            # Send the message and stream tokens
-            for token in send_message(ws_connection, user_id, chat_id, message):
-                yield token  # Stream tokens to the interface
-            break  # Exit the loop if successful
-        except Exception as e:
-            ws_connection = connect_websocket(user_id)  # Attempt to reconnect
+def send_message_with_reconnect(ws_connection, user_id, chat_id, message):
+    try:
+        # Ensure WebSocket connection is active
+        if not ws_connection.connected:
+            ws_connection = connect_websocket(user_id)
+        # Send the message and stream tokens
+        for token in send_message(ws_connection, user_id, chat_id, message):
+            yield token  # Stream tokens to the interface
+    except Exception as e:
+        ws_connection = connect_websocket(user_id)  # Attempt to reconnect
 
 
 

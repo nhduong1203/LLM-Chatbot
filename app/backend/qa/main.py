@@ -52,14 +52,12 @@ class UserState:
         self.cassandra = CassandraMessageStore()
 
     def retrieve_chat_history(self, conversation_id):
-        self.chat_history = self.cassandra.get_chat_history(conversation_id=conversation_id)
+        chat_history = self.cassandra.get_chat_history(conversation_id=conversation_id)
+        return chat_history
 
     def increment_counter(self):
         self.counter += 1
         return self.counter
-
-
-
 
 @app.websocket("/ws/{user_id}")
 async def websocket_message_response(websocket: WebSocket, user_id: str):
@@ -87,9 +85,12 @@ async def websocket_message_response(websocket: WebSocket, user_id: str):
                     if user_state.history_init == True:
                         user_state.history_init = False
                         chat_history = user_state.retrieve_chat_history(conversation_id=conversation_id)
+                    if not chat_history: 
+                        chat_history = ["There is currently no message history."]
+                        
                     generator = rag.generate_llm_answer(query=message, user_id=user_id, conversation_id=conversation_id, chat_history=chat_history)
                     
-                    logger.info(chat_history)
+                    logger.info(f"chat_history: {chat_history}")
 
                     # Stream responses to the WebSocket client
                     for answer in generator:
