@@ -58,16 +58,17 @@ async def process_document(user_id, chat_id, upload_option, url=None, uploaded_f
     except requests.exceptions.RequestException as e:
         return {"status": "error", "message": str(e)}
     
+import requests
+
 async def delete_document(user_id, chat_id, upload_option, document_name=None):
     """
-    Sends a request to the upload endpoint to process documents or URLs.
+    Sends a request to the remove_document endpoint to delete documents.
 
     Args:
         user_id (str): The user ID.
         chat_id (str): The chat ID.
         upload_option (str): The type of upload (URL or File).
-        url (str, optional): The URL to be processed.
-        uploaded_files (list, optional): List of uploaded file objects.
+        document_name (str, optional): The name of the document to be deleted.
 
     Returns:
         dict: The API response in JSON format.
@@ -79,17 +80,17 @@ async def delete_document(user_id, chat_id, upload_option, document_name=None):
         "upload_option": upload_option,
         "document_name": document_name
     }
-    # upload_option: str, document_name
 
     headers = {"Accept": "application/json"}
 
-    # Send the POST request
     try:
-        r = requests.post(DOC_VECTORDB_API_URL, data=data, headers=headers)
+        # Use DELETE method instead of POST
+        r = requests.delete(DOC_VECTORDB_API_URL, json=data, headers=headers)
         r.raise_for_status()  # Raise exception for HTTP errors
         return r.json()
     except requests.exceptions.RequestException as e:
         return {"status": "error", "message": str(e)}
+
     
 def sync_process_document(user_id, chat_id, upload_option, url=None, uploaded_files=None):
     asyncio.run(process_document(user_id, chat_id, upload_option, url=url, uploaded_files=uploaded_files))
