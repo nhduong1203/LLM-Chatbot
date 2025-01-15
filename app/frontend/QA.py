@@ -3,6 +3,17 @@ from utils import sync_process_document, send_message, sync_delete_document
 from websocket import create_connection
 import os
 import time
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,  
+    format="%(asctime)s [%(levelname)s] %(message)s",  
+    handlers=[
+        logging.StreamHandler()  
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 if "keep_alive_started" not in st.session_state:
     st.session_state["keep_alive_started"] = False
@@ -13,10 +24,11 @@ if "nginx_url" not in st.session_state:
 def connect_websocket(user_id):
     try:
         if "ws_connection" not in st.session_state or st.session_state.ws_connection is None:
-            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}")
+            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}", timeout=300, http_proxy_timeout=300)
         if not st.session_state.ws_connection.connected:
+            logger.info("new connection")
             st.session_state.ws_connection.close()
-            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}")
+            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}", timeout=300, http_proxy_timeout=300)
     except Exception as e:
         st.session_state.ws_connection = None
         raise Exception(f"Failed to connect or reconnect to WebSocket: {e}")
@@ -28,9 +40,7 @@ def send_message_with_reconnect(ws_connection, user_id, chat_id, message, max_re
     while retries < max_retries:
         try:
             # Ensure WebSocket connection is active
-            if not ws_connection.connected:
-                ws_connection = connect_websocket(user_id)
-
+            ws_connection = connect_websocket(user_id)
             # Send the message and stream tokens
             for token in send_message(ws_connection, user_id, chat_id, message):
                 yield token  # Stream tokens to the interface
@@ -38,10 +48,13 @@ def send_message_with_reconnect(ws_connection, user_id, chat_id, message, max_re
 
         except Exception as e:
             retries += 1
+            time.sleep(0.5)
             if retries >= max_retries:
                 raise Exception(f"WebSocket error after {max_retries} retries: {e}")
             else:
-                print(f"Connection lost. Retrying... ({retries}/{max_retries})")
+                logger.info(f"Connection lost. Retrying... ({retries}/{max_retries})")
+
+        
         
 
 # Configure Streamlit page layout
