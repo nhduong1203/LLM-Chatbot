@@ -14,7 +14,7 @@ def connect_websocket(user_id):
     try:
         if "ws_connection" not in st.session_state or st.session_state.ws_connection is None:
             st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}")
-        elif not st.session_state.ws_connection.connected:
+        if not st.session_state.ws_connection.connected:
             st.session_state.ws_connection.close()
             st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}")
     except Exception as e:
