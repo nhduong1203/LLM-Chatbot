@@ -129,12 +129,6 @@ async def handle_upload(
             span.record_exception(ValueError("No valid input provided."))
             return {"status": "error", "message": "No valid input provided."}
         
-    # data = {
-    #     "user_id": user_id,
-    #     "chat_id": chat_id,
-    #     "url": upload_option,
-    #     "uploaded_file": uploaded_file
-    # }
 @app.delete("/remove_document")
 async def remove_document(user_id: str, chat_id: str, upload_option: str, document_name: str):
     """Remove a document from MinIO and Redis based on its name."""
