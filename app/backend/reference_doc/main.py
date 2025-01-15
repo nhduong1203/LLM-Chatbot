@@ -114,6 +114,7 @@ async def handle_upload(
                                 logger.warning("Uploaded file is empty")
                             else:
                                 file_content = file_content.decode("utf-8", errors="replace")
+                                logger.info(file_content)
                         
                         if file_content:
                             chunks = chunker.process_file(file_content)
