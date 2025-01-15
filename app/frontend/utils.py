@@ -6,7 +6,6 @@ import httpx
 import streamlit as st
 import logging
 import asyncio
-from typing import AsyncGenerator
 
 # Configure logging
 logging.basicConfig(

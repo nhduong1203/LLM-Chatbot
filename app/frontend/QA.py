@@ -2,11 +2,13 @@ import streamlit as st
 from utils import sync_process_document, send_message, sync_delete_document
 from websocket import create_connection
 import os
+import time
 
 if "keep_alive_started" not in st.session_state:
     st.session_state["keep_alive_started"] = False
 if "nginx_url" not in st.session_state:
     st.session_state["nginx_url"] = os.getenv("NGINX_URL")
+
 
 def connect_websocket(user_id):
     try:
@@ -21,16 +23,26 @@ def connect_websocket(user_id):
     return st.session_state.ws_connection
 
 
-def send_message_with_reconnect(ws_connection, user_id, chat_id, message):
-    try:
-        # Ensure WebSocket connection is active
-        if not ws_connection.connected:
-            ws_connection = connect_websocket(user_id)
-        # Send the message and stream tokens
-        for token in send_message(ws_connection, user_id, chat_id, message):
-            yield token  # Stream tokens to the interface
-    except Exception as e:
-        ws_connection = connect_websocket(user_id)  # Attempt to reconnect
+def send_message_with_reconnect(ws_connection, user_id, chat_id, message, max_retries=3):
+    retries = 0
+    while retries < max_retries:
+        try:
+            # Ensure WebSocket connection is active
+            if not ws_connection.connected:
+                ws_connection = connect_websocket(user_id)
+
+            # Send the message and stream tokens
+            for token in send_message(ws_connection, user_id, chat_id, message):
+                yield token  # Stream tokens to the interface
+            break  # Exit the loop if successful
+
+        except Exception as e:
+            retries += 1
+            if retries >= max_retries:
+                raise Exception(f"WebSocket error after {max_retries} retries: {e}")
+            else:
+                print(f"Connection lost. Retrying... ({retries}/{max_retries})")
+        
 
 # Configure Streamlit page layout
 st.set_page_config(layout="wide")
@@ -117,6 +129,7 @@ if prompt := st.chat_input("Ask your question:"):
             for token in send_message_with_reconnect(ws_connection, user_id="user123", chat_id="chat456", message=prompt):
                 full_response += token  # Append the new token to the response
                 response_container.write(full_response)  # Update the placeholder
+                time.sleep(0.01)
             st.session_state.messages.append(
                 {
                     "role": "assistant",

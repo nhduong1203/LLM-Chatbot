@@ -65,7 +65,6 @@ def get_openai_stream_response(message, context=None, max_tokens=250):
             stream=True  # Enable streaming response
         )
 
-        print("Response:")
         for chunk in response:
             if 'choices' in chunk:
                 # Extract content from the stream response
