@@ -16,17 +16,10 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 # Configure OpenTelemetry Tracer
 resource = Resource(attributes={SERVICE_NAME: "chat-service"})
 provider = TracerProvider(resource=resource)
-local = True
-if local:
-    jaeger_exporter = JaegerExporter(
-        agent_host_name=os.getenv("JAEGER_AGENT_HOST", "localhost"),
-        agent_port=int(os.getenv("JAEGER_AGENT_PORT", 6831)),
-    )
-else:
-    jaeger_exporter = JaegerExporter(
-        agent_host_name="jaeger-agent.observability.svc.cluster.local",
-        agent_port=6831,
-    )
+jaeger_exporter = JaegerExporter(
+    agent_host_name="jaeger-agent.observability.svc.cluster.local",
+    agent_port=6831,
+)
 provider.add_span_processor(BatchSpanProcessor(jaeger_exporter))
 trace.set_tracer_provider(provider)
 tracer = trace.get_tracer(__name__)

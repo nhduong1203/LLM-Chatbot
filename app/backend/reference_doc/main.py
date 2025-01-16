@@ -20,17 +20,10 @@ set_tracer_provider(
     TracerProvider(resource=Resource.create({SERVICE_NAME: "file-upload-service"}))
 )
 tracer = get_tracer_provider().get_tracer("file_upload_tracer")
-local = True
-if local:
-    jaeger_exporter = JaegerExporter(
-        agent_host_name=os.getenv("JAEGER_AGENT_HOST", "localhost"),
-        agent_port=int(os.getenv("JAEGER_AGENT_PORT", 6831)),
-    )
-else:
-    jaeger_exporter = JaegerExporter(
-        agent_host_name="jaeger-agent.observability.svc.cluster.local",
-        agent_port=6831,
-    )
+jaeger_exporter = JaegerExporter(
+    agent_host_name="jaeger-agent.observability.svc.cluster.local",
+    agent_port=6831,
+)
 span_processor = BatchSpanProcessor(jaeger_exporter)
 get_tracer_provider().add_span_processor(span_processor)
 

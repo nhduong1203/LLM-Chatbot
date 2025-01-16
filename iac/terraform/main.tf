@@ -19,12 +19,11 @@ resource "google_container_cluster" "primary" {
   location                 = var.region
   remove_default_node_pool = true
   initial_node_count       = 1
-
 }
 
-# Node Pool for System Services (minio and redis)
+# Node Pool for System Services
 resource "google_container_node_pool" "system_services" {
-  name       = "${var.project_id}-system-pool"
+  name       = "${var.project_id}-system-services-pool"
   location   = var.region
   cluster    = google_container_cluster.primary.name
   node_count = 1
@@ -44,32 +43,73 @@ resource "google_container_node_pool" "system_services" {
   }
 }
 
-# Node Pool for Compute-Heavy Workloads (doc_management_api, chat_api) without GPU
-resource "google_container_node_pool" "backend-service" {
-  name       = "${var.project_id}-compute-pool"
+# Node Pool for Cassandra
+resource "google_container_node_pool" "cassandra" {
+  name       = "${var.project_id}-cassandra-pool"
   location   = var.region
   cluster    = google_container_cluster.primary.name
   node_count = 1
 
   node_config {
-    machine_type = "n1-standard-4" # Use a standard machine type
-    disk_size_gb = 100
+    machine_type = "n1-highmem-4"
+    disk_size_gb = 200
     preemptible  = false
     labels = {
-      workload = "compute-heavy"
+      workload = "cassandra"
     }
   }
 
-  # Optional: Enable autoscaling for better resource utilization
   autoscaling {
     min_node_count = 1
     max_node_count = 3
   }
 }
 
+# Node Pool for Backend Document Management
+resource "google_container_node_pool" "backend_doc" {
+  name       = "${var.project_id}-backend-doc-pool"
+  location   = var.region
+  cluster    = google_container_cluster.primary.name
+  node_count = 1
 
+  node_config {
+    machine_type = "n1-highmem-4"
+    disk_size_gb = 100
+    preemptible  = false
+    labels = {
+      workload = "backend-doc"
+    }
+  }
 
-# Node Pool for Frontend
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 3
+  }
+}
+
+# Node Pool for Backend Chat
+resource "google_container_node_pool" "backend_chat" {
+  name       = "${var.project_id}-backend-chat-pool"
+  location   = var.region
+  cluster    = google_container_cluster.primary.name
+  node_count = 1
+
+  node_config {
+    machine_type = "n1-standard-4"
+    disk_size_gb = 100
+    preemptible  = false
+    labels = {
+      workload = "backend-chat"
+    }
+  }
+
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 3
+  }
+}
+
+# Node Pool for Frontend and NGINX
 resource "google_container_node_pool" "frontend" {
   name       = "${var.project_id}-frontend-pool"
   location   = var.region
