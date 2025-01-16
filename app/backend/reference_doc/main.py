@@ -86,7 +86,10 @@ async def handle_upload(
         results = []
 
         if uploaded_files:
-            # await minio_manager.upload_to_minio(bucket_name, user_id, chat_id, "Upload Files", uploaded_files=uploaded_files)
+            await minio_manager.upload_to_minio(bucket_name, user_id, chat_id, "Upload Files", uploaded_files=uploaded_files)
+            for uploaded_file in uploaded_files:
+                uploaded_file.file.seek(0)
+
             for uploaded_file in uploaded_files:
                 with tracer.start_as_current_span("process_file") as file_span:
                     file_span.set_attribute("filename", uploaded_file.filename)
@@ -114,7 +117,6 @@ async def handle_upload(
                                 logger.warning("Uploaded file is empty")
                             else:
                                 file_content = file_content.decode("utf-8", errors="replace")
-                                logger.info(file_content)
                         
                         if file_content:
                             chunks = chunker.process_file(file_content)
@@ -127,6 +129,8 @@ async def handle_upload(
                     except Exception as e:
                         file_span.record_exception(e)
                         results.append({"filename": uploaded_file.filename, "status": "error", "message": str(e)})
+
+                
 
         if results:
             return {"status": "success", "results": results}
