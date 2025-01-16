@@ -21,14 +21,14 @@ if "nginx_url" not in st.session_state:
     st.session_state["nginx_url"] = os.getenv("NGINX_URL")
 
 
-def connect_websocket(user_id):
+def connect_websocket(chat_id):
     try:
         if "ws_connection" not in st.session_state or st.session_state.ws_connection is None:
-            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}", timeout=300, http_proxy_timeout=300)
+            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{chat_id}", timeout=300, http_proxy_timeout=300)
         if not st.session_state.ws_connection.connected:
             logger.info("new connection")
             st.session_state.ws_connection.close()
-            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{user_id}", timeout=300, http_proxy_timeout=300)
+            st.session_state.ws_connection = create_connection(f"ws://{st.session_state.nginx_url}/ws/{chat_id}", timeout=300, http_proxy_timeout=300)
     except Exception as e:
         st.session_state.ws_connection = None
         raise Exception(f"Failed to connect or reconnect to WebSocket: {e}")
@@ -40,7 +40,7 @@ def send_message_with_reconnect(ws_connection, user_id, chat_id, message, max_re
     while retries < max_retries:
         try:
             # Ensure WebSocket connection is active
-            ws_connection = connect_websocket(user_id)
+            ws_connection = connect_websocket(chat_id)
             # Send the message and stream tokens
             for token in send_message(ws_connection, user_id, chat_id, message):
                 yield token  # Stream tokens to the interface
@@ -139,7 +139,7 @@ if prompt := st.chat_input("Ask your question:"):
         with st.chat_message("assistant"):
             response_container = st.empty()  # Placeholder for streaming response
             full_response = ""  # Accumulate the response here
-            ws_connection = connect_websocket(user_id="user123")
+            ws_connection = connect_websocket(chat_id="chat456")
             for token in send_message_with_reconnect(ws_connection, user_id="user123", chat_id="chat456", message=prompt):
                 full_response += token  # Append the new token to the response
                 response_container.write(full_response)  # Update the placeholder

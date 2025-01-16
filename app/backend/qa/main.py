@@ -59,8 +59,8 @@ class UserState:
         self.counter += 1
         return self.counter
 
-@app.websocket("/ws/{user_id}")
-async def websocket_message_response(websocket: WebSocket, user_id: str):
+@app.websocket("/ws/{conversation_id}")
+async def websocket_message_response(websocket: WebSocket, conversation_id: str):
     user_state = UserState()
     await websocket.accept()
     
@@ -71,6 +71,7 @@ async def websocket_message_response(websocket: WebSocket, user_id: str):
             # ---------------------------------------------------------------------
             # Assuming the message is a JSON string with fields chat_id, message, timestamp
             message_data = json.loads(data)
+            user_id = message_data["user_id"]
             conversation_id = message_data["chat_id"]
             message = message_data["message"]
 

@@ -114,7 +114,6 @@ def send_message(ws_connection, user_id, chat_id, message):
     try:
     
         payload = {
-            "type": "ms",
             "user_id": user_id,
             "chat_id": chat_id,
             "message": message
