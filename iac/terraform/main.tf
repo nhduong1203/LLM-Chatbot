@@ -23,7 +23,7 @@ resource "google_container_cluster" "primary" {
 
 # Node Pool for System Services
 resource "google_container_node_pool" "system_services" {
-  name       = "${var.project_id}-system-services-pool"
+  name       = "${var.project_id}-sys-svc-pool"
   location   = var.region
   cluster    = google_container_cluster.primary.name
   node_count = 1
@@ -45,7 +45,7 @@ resource "google_container_node_pool" "system_services" {
 
 # Node Pool for Cassandra
 resource "google_container_node_pool" "cassandra" {
-  name       = "${var.project_id}-cassandra-pool"
+  name       = "${var.project_id}-cass-pool"
   location   = var.region
   cluster    = google_container_cluster.primary.name
   node_count = 1
@@ -67,7 +67,7 @@ resource "google_container_node_pool" "cassandra" {
 
 # Node Pool for Backend Document Management
 resource "google_container_node_pool" "backend_doc" {
-  name       = "${var.project_id}-backend-doc-pool"
+  name       = "${var.project_id}-doc-pool"
   location   = var.region
   cluster    = google_container_cluster.primary.name
   node_count = 1
@@ -89,7 +89,7 @@ resource "google_container_node_pool" "backend_doc" {
 
 # Node Pool for Backend Chat
 resource "google_container_node_pool" "backend_chat" {
-  name       = "${var.project_id}-backend-chat-pool"
+  name       = "${var.project_id}-chat-pool"
   location   = var.region
   cluster    = google_container_cluster.primary.name
   node_count = 1

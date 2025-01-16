@@ -1,0 +1,28 @@
+{{- range $serviceName, $config := .Values.services }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $serviceName }}
+spec:
+  replicas: {{ $.Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $serviceName }}
+  template:
+    metadata:
+      labels:
+        app: {{ $serviceName }}
+    spec:
+      nodeSelector:
+        {{- toYaml $config.nodeSelector | nindent 8 }}
+      containers:
+      - name: {{ $serviceName }}
+        image: "{{ $config.image.repository }}:{{ $config.image.tag }}"
+        ports:
+        - containerPort: {{ $config.port }}
+        env:
+        {{- range $key, $value := $config.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+{{- end }}
