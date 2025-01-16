@@ -160,7 +160,7 @@ async def remove_document(request: RemoveDocumentRequest):
             # Remove from MinIO
             with tracer.start_as_current_span("remove_from_minio") as minio_span:
                 try:
-                    minio_manager.delete_from_minio(
+                    await minio_manager.delete_from_minio(
                         bucket_name=bucket_name,
                         user_id=request.user_id,
                         chat_id=request.chat_id,

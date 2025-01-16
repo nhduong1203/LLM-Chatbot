@@ -80,7 +80,7 @@ if upload_option == "Website URL":
     url = st.sidebar.text_input("Enter Website URL:")
     if st.sidebar.button("Add URL"):
         if url:
-            st.session_state["references"].append(f"URL: {url}")
+            st.session_state["references"].append(f"{url}")
             st.session_state["upload_options"].append("Website URL")
             st.sidebar.success(f"Added URL: {url}")
 
@@ -94,7 +94,7 @@ elif upload_option == "Upload Files":
             # TODO
             sync_process_document("user123", "chat456", "Upload Files", uploaded_files=uploaded_files)
             for uploaded_file in uploaded_files:
-                st.session_state["references"].append(f"File: {uploaded_file.name}")
+                st.session_state["references"].append(f"{uploaded_file.name}")
                 st.session_state["upload_options"].append("Upload Files")
             st.sidebar.success(f"Added {len(uploaded_files)} files.")
 
