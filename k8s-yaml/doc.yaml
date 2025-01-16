@@ -13,7 +13,7 @@ spec:
         app: doc-management-api
     spec:
       nodeSelector:
-        workload: compute-heavy
+        workload: backend-doc # Aligning with node pool label from Terraform
       containers:
       - name: doc-management-api
         image: your-dockerhub-username/doc_management_api:latest
@@ -28,9 +28,7 @@ spec:
           value: minio
         - name: MINIO_PORT
           value: "9000"
-
 ---
-
 apiVersion: v1
 kind: Service
 metadata:

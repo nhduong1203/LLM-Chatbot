@@ -13,7 +13,7 @@ spec:
         app: chat-api
     spec:
       nodeSelector:
-        workload: compute-heavy
+        workload: backend-chat # Aligning with node pool label from Terraform
       containers:
       - name: chat-api
         image: your-dockerhub-username/chat_api:latest

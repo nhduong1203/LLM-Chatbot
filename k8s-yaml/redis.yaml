@@ -13,12 +13,15 @@ spec:
         app: redis
     spec:
       nodeSelector:
-        workload: system-services
+        workload: system-services # Aligning with the Terraform setup
       containers:
       - name: redis
         image: redis/redis-stack-server:7.2.0-v6
         ports:
         - containerPort: 6379
+        env:
+        - name: REDIS_ARGS
+          value: "--save 60 1 --loglevel warning" # Example for fine-tuning Redis settings
 ---
 apiVersion: v1
 kind: Service
@@ -30,3 +33,5 @@ spec:
   ports:
   - port: 6379
     targetPort: 6379
+    protocol: TCP
+  type: ClusterIP
