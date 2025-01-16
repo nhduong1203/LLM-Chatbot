@@ -3,6 +3,17 @@ from minio import Minio
 import io
 from opentelemetry import trace
 from PyPDF2 import PdfReader
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,  
+    format="%(asctime)s [%(levelname)s] %(message)s",  
+    handlers=[
+        logging.StreamHandler()  
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 class MinioManager:
     def __init__(self, minio_host=None, minio_port=None, minio_access_key=None, minio_secret_key=None, minio_secure=False):
@@ -100,8 +111,10 @@ class MinioManager:
             if upload_option == "Website URL":
                 unique_id = hash(file_name)  # Generate a unique ID for the URL
                 object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/urls/{unique_id}.txt"
+                logger.info(f"remove object name: {object_name}")
             elif upload_option == "Upload Files" and file_name:
                 object_name = f"users/{user_id}/chats/{chat_id}/reference-documents/{file_name}"
+                logger.info(f"remove object name: {object_name}")
             else:
                 print("Invalid upload option or missing file name.")
                 raise ValueError("Invalid upload option or missing file name.")

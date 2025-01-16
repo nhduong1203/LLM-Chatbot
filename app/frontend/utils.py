@@ -57,8 +57,6 @@ async def process_document(user_id, chat_id, upload_option, url=None, uploaded_f
         return r.json()
     except requests.exceptions.RequestException as e:
         return {"status": "error", "message": str(e)}
-    
-import requests
 
 async def delete_document(user_id, chat_id, upload_option, document_name=None):
     """
@@ -81,11 +79,13 @@ async def delete_document(user_id, chat_id, upload_option, document_name=None):
         "document_name": document_name
     }
 
-    headers = {"Accept": "application/json"}
+    logger.info(f"Remove data: {data}")
+
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
     try:
-        # Use DELETE method instead of POST
-        r = requests.delete(DOC_VECTORDB_API_URL, json=data, headers=headers)
+        # Use POST method instead of DELETE
+        r = requests.post(DOC_VECTORDB_API_URL, json=data, headers=headers)
         r.raise_for_status()  # Raise exception for HTTP errors
         return r.json()
     except requests.exceptions.RequestException as e:
@@ -96,7 +96,7 @@ def sync_process_document(user_id, chat_id, upload_option, url=None, uploaded_fi
     asyncio.run(process_document(user_id, chat_id, upload_option, url=url, uploaded_files=uploaded_files))
 
 def sync_delete_document(user_id, chat_id, upload_option, document_name):
-    asyncio.run(process_document(user_id, chat_id, upload_option, document_name))
+    asyncio.run(delete_document(user_id, chat_id, upload_option, document_name))
 
 def send_message(ws_connection, user_id, chat_id, message):
     """

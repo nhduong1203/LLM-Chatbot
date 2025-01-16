@@ -4,6 +4,17 @@ from redis.commands.search.field import TextField, VectorField
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.exceptions import ResponseError
 from opentelemetry import trace
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,  
+    format="%(asctime)s [%(levelname)s] %(message)s",  
+    handlers=[
+        logging.StreamHandler()  
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 class RedisVectorIndexManager:
     def __init__(self, redis_host=None, redis_port=None, vector_dimension=384):
@@ -107,10 +118,10 @@ class RedisVectorIndexManager:
 
                 pipeline.execute()
                 span.add_event(f"Deleted all chunks for doc_id {doc_id}")
-                print(f"Deleted {len(keys)} chunks for doc_id {doc_id}.")
+                logger.info(f"Deleted {len(keys)} chunks for doc_id {doc_id}.")
             except Exception as e:
                 span.record_exception(e)
-                print(f"Failed to delete chunks for doc_id {doc_id}: {e}")
+                logger.info(f"Failed to delete chunks for doc_id {doc_id}: {e}")
                 raise
 
 # Example Usage

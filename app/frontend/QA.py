@@ -107,6 +107,7 @@ if st.session_state["references"]:
             st.write(ref)
         with col2:
             if st.button("Remove", key=f"remove_{i}"):
+                logger.info("Delete.....")
                 sync_delete_document("user123", "chat456", upload_option=st.session_state["upload_options"][i], document_name=ref)
                 st.session_state["references"].pop(i)
                 st.session_state["upload_options"].pop(i)
