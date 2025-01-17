@@ -1,5 +1,0 @@
-apiVersion: v2
-name: backend-service
-description: Helm chart for backend services
-version: 0.1.0
-appVersion: "latest"
