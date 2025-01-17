@@ -24,6 +24,8 @@ spec:
           value: http://backend-doc:8000
         - name: CHAT_API_URL
           value: http://backend-chat:8001
+        - name: NGINX_URL
+          value: http://nginx:80
 
 ---
 
