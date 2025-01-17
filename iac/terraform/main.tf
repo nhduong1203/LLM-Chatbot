@@ -30,8 +30,9 @@ resource "google_container_node_pool" "system_services" {
 
   node_config {
     machine_type = "e2-standard-2"
-    disk_size_gb = 50
+    disk_size_gb = 40
     preemptible  = false
+    image_type   = "COS_CONTAINERD"
     labels = {
       workload = "system-services"
     }
@@ -45,15 +46,16 @@ resource "google_container_node_pool" "system_services" {
 
 # Node Pool for Cassandra
 resource "google_container_node_pool" "cassandra" {
-  name       = "${var.project_id}-cass-pool"
+  name       = "${var.project_id}-cassandra-pool"
   location   = var.region
   cluster    = google_container_cluster.primary.name
   node_count = 1
 
   node_config {
-    machine_type = "n1-highmem-4"
-    disk_size_gb = 200
+    machine_type = "e2-highmem-4"
+    disk_size_gb = 40 # Reduced from 200GB
     preemptible  = false
+    image_type   = "COS_CONTAINERD"
     labels = {
       workload = "cassandra"
     }
@@ -61,11 +63,11 @@ resource "google_container_node_pool" "cassandra" {
 
   autoscaling {
     min_node_count = 1
-    max_node_count = 3
+    max_node_count = 2
   }
 }
 
-# Node Pool for Backend Document Management
+# Node Pool for Backend Doc Management
 resource "google_container_node_pool" "backend_doc" {
   name       = "${var.project_id}-doc-pool"
   location   = var.region
@@ -73,9 +75,10 @@ resource "google_container_node_pool" "backend_doc" {
   node_count = 1
 
   node_config {
-    machine_type = "n1-highmem-4"
-    disk_size_gb = 100
+    machine_type = "e2-standard-4" # Optimized for balanced workloads
+    disk_size_gb = 40
     preemptible  = false
+    image_type   = "COS_CONTAINERD"
     labels = {
       workload = "backend-doc"
     }
@@ -83,7 +86,7 @@ resource "google_container_node_pool" "backend_doc" {
 
   autoscaling {
     min_node_count = 1
-    max_node_count = 3
+    max_node_count = 2
   }
 }
 
@@ -95,9 +98,10 @@ resource "google_container_node_pool" "backend_chat" {
   node_count = 1
 
   node_config {
-    machine_type = "n1-standard-4"
-    disk_size_gb = 100
+    machine_type = "e2-standard-4" # Optimized for balanced workloads
+    disk_size_gb = 40
     preemptible  = false
+    image_type   = "COS_CONTAINERD"
     labels = {
       workload = "backend-chat"
     }
@@ -105,13 +109,13 @@ resource "google_container_node_pool" "backend_chat" {
 
   autoscaling {
     min_node_count = 1
-    max_node_count = 3
+    max_node_count = 2
   }
 }
 
 # Node Pool for Frontend and NGINX
 resource "google_container_node_pool" "frontend" {
-  name       = "${var.project_id}-frontend-pool"
+  name       = "${var.project_id}-fe-pool"
   location   = var.region
   cluster    = google_container_cluster.primary.name
   node_count = 1
@@ -120,6 +124,7 @@ resource "google_container_node_pool" "frontend" {
     machine_type = "e2-medium"
     disk_size_gb = 40
     preemptible  = true
+    image_type   = "COS_CONTAINERD"
     labels = {
       workload = "frontend"
     }
@@ -127,7 +132,7 @@ resource "google_container_node_pool" "frontend" {
 
   autoscaling {
     min_node_count = 1
-    max_node_count = 3
+    max_node_count = 1
   }
 }
 

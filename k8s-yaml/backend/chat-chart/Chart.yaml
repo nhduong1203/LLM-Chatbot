@@ -1,5 +1,0 @@
-apiVersion: v2
-name: backend-chat
-description: A Helm chart for deploying backend-chat
-version: 0.1.0
-appVersion: "latest"

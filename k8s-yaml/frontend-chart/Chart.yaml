@@ -1,5 +1,0 @@
-apiVersion: v2
-name: frontend-streamlit
-description: A Helm chart for deploying frontend-streamlit
-version: 0.1.0
-appVersion: "latest"

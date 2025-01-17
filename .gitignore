@@ -9,3 +9,6 @@ env
 
 # Ignore any terraform state files
 *.tfstate
+
+data
+reids_data
