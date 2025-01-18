@@ -8,6 +8,7 @@ Welcome to **Chat With Your Documents**, an advanced stateful chatbot applicatio
 - **🤝 Stateful Conversations**: Maintain the context of your queries for more intelligent and coherent interactions.
 - **📄 Document Integration**: Upload files or provide URLs to make your documents chat-ready.
 - **🚀 Google Kubernetes Deployment**: Deployed seamlessly on Google Kubernetes Engine (GKE) for scalable and robust operations.
+- **🔄 CI/CD Integration**: Equipped with a Continuous Integration and Continuous Deployment (CI/CD) pipeline to ensure fast, reliable updates and maintenance. *(In progress...)*
 
 This repository contains all the resources you need to deploy, customize, and use the application effectively. Dive into the sections below to get started! 🚀
 
@@ -145,8 +146,12 @@ Due to the limitations of GCP's free trial tier, I am unable to use instances wi
 
 This completes the setup and deployment of the chatbot application on GKE. 🎉
 With NodePort Service, you can access the frontend from the external IP of a node.
-
-![[Pasted image 20250119054943.png | center | 600]]
+<p align="center">
+  <img src="images/frontend.png">
+</p>
+<p align="center">
+  <strong>Figure 1.</strong> Frontend.
+</p>
 
 ## Observability
 
@@ -205,7 +210,12 @@ So far, we have deployed the model and the FastAPI app to GKE. Now, we need to m
    nohup kubectl port-forward svc/jaeger-query 16686:80 > port-forward.log 2>&1 &
    ```
    - Access via: [http://localhost:16686](http://localhost:16686) or node's external-IP
-
+<p align="center">
+  <img src="images/jaeger.png">
+</p>
+<p align="center">
+  <strong>Figure 1.</strong> Frontend.
+</p>
 
    6.2. **Kibana**:
    - Forward port:
@@ -217,7 +227,12 @@ So far, we have deployed the model and the FastAPI app to GKE. Now, we need to m
      ```shell
      kubectl get secret elasticsearch-es-elastic-user -n observability -o jsonpath='{.data.elastic}' | base64 -d
      ```
-
+<p align="center">
+  <img src="images/elastic.png">
+</p>
+<p align="center">
+  <strong>Figure 1.</strong> Frontend.
+</p>
 
 
    6.3. **Grafana**:
@@ -232,5 +247,10 @@ So far, we have deployed the model and the FastAPI app to GKE. Now, we need to m
      password: admin
      ```
    - Check for metrics.
-
+<p align="center">
+  <img src="images/metric.png">
+</p>
+<p align="center">
+  <strong>Figure 1.</strong> Frontend.
+</p>
 
