@@ -7,7 +7,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 import openai
 
 # Configure OpenTelemetry Tracer
-resource = Resource(attributes={SERVICE_NAME: "runpod-client"})
+resource = Resource(attributes={SERVICE_NAME: "chat-service"})
 provider = TracerProvider(resource=resource)
 jaeger_exporter = JaegerExporter(
     agent_host_name="jaeger-agent.observability.svc.cluster.local",
@@ -16,10 +16,6 @@ jaeger_exporter = JaegerExporter(
 provider.add_span_processor(BatchSpanProcessor(jaeger_exporter))
 trace.set_tracer_provider(provider)
 tracer = trace.get_tracer(__name__)
-
-# endpoint_id = os.environ["RUNPOD_ENDPOINT_ID"]
-# URI = f"https://api.runpod.ai/v2/{endpoint_id}/run"
-# api_key =os.environ['RUNPOD_AI_API_KEY']
 
 api_key = os.environ.get("OPENAI_API_KEY")
 model = "gpt-3.5-turbo"

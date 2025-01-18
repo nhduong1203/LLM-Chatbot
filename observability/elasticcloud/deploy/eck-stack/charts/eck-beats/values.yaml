@@ -121,7 +121,7 @@ spec:
       type: kubernetes
       hints.default_config.enabled: "false"
       templates:
-      - condition.equals.kubernetes.namespace: quote-gen
+      - condition.equals.kubernetes.namespace: chatbot
         config:
         - paths: ["/var/log/containers/*${data.kubernetes.container.id}.log"]
           type: container

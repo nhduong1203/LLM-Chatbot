@@ -22,41 +22,37 @@ spec:
       labels:
         app: jaeger
     spec:
-      nodeSelector:
-        workload: system-services # Ensure deployment on specific nodes
       containers:
-      - name: jaeger-agent
-        image: jaegertracing/jaeger-agent:1.43
-        args: ["--reporter.grpc.host-port=jaeger-collector:14250"]
+      - name: jaeger
+        image: jaegertracing/all-in-one:1.45
         ports:
-        - containerPort: 6831 # For UDP (Thrift Compact)
-          protocol: UDP
-        - containerPort: 6832 # For UDP (Thrift Binary)
-          protocol: UDP
-        - containerPort: 5778 # For HTTP sampling
-          protocol: TCP
-        - containerPort: 14271 # Admin port
-          protocol: TCP
-      - name: jaeger-collector
-        image: jaegertracing/jaeger-collector:1.43
-        ports:
-        - containerPort: 14250 # gRPC
-          protocol: TCP
-        - containerPort: 14268 # HTTP
-          protocol: TCP
-        - containerPort: 14269 # Admin port
-          protocol: TCP
+        - containerPort: 6831
+          protocol: UDP # Jaeger Thrift Compact
+        - containerPort: 6832
+          protocol: UDP # Jaeger Thrift Binary
+        - containerPort: 5778
+          protocol: TCP # Configuration endpoint
+        - containerPort: 16686
+          protocol: TCP # Query UI
+        - containerPort: 14268
+          protocol: TCP # Collector HTTP endpoint
+        - containerPort: 14269
+          protocol: TCP # Admin endpoint
+        - containerPort: 14250
+          protocol: TCP # gRPC collector
+        - containerPort: 9411
+          protocol: TCP # Zipkin compatible endpoint
+        - containerPort: 4317
+          protocol: TCP # OTLP gRPC
+        - containerPort: 4318
+          protocol: TCP # OTLP HTTP
         env:
-        - name: SPAN_STORAGE_TYPE
-          value: memory
-      - name: jaeger-query
-        image: jaegertracing/jaeger-query:1.43
-        ports:
-        - containerPort: 16686 # Query UI
-          protocol: TCP
-        env:
-        - name: SPAN_STORAGE_TYPE
-          value: memory
+        - name: JAEGER_AGENT_PORT
+          value: "6831"
+        - name: COLLECTOR_ZIPKIN_HTTP_PORT
+          value: ":9411"
+        - name: COLLECTOR_OTLP_ENABLED
+          value: "true"
 
 ---
 
@@ -68,6 +64,7 @@ metadata:
   labels:
     app: jaeger
 spec:
+  type: ClusterIP
   ports:
   - name: thrift-compact
     port: 6831
@@ -77,13 +74,12 @@ spec:
     port: 6832
     protocol: UDP
     targetPort: 6832
-  - name: admin
+  - name: config
     port: 5778
     protocol: TCP
     targetPort: 5778
   selector:
     app: jaeger
-  clusterIP: None # For DaemonSet-like behavior
 
 ---
 
@@ -98,10 +94,10 @@ spec:
   type: NodePort
   ports:
   - name: http
-    port: 80              # Expose the service on port 80
+    port: 80
     protocol: TCP
-    targetPort: 16686     # Forward traffic to the Jaeger Query UI container port 16686
-    nodePort: 30002       # Specify a NodePort
+    targetPort: 16686
+    nodePort: 30002
   selector:
     app: jaeger
 
@@ -115,6 +111,7 @@ metadata:
   labels:
     app: jaeger
 spec:
+  type: ClusterIP
   ports:
   - name: grpc
     port: 14250
@@ -124,5 +121,17 @@ spec:
     port: 14268
     protocol: TCP
     targetPort: 14268
+  - name: zipkin
+    port: 9411
+    protocol: TCP
+    targetPort: 9411
+  - name: otlp-http
+    port: 4318
+    protocol: TCP
+    targetPort: 4318
+  - name: otlp-grpc
+    port: 4317
+    protocol: TCP
+    targetPort: 4317
   selector:
     app: jaeger
