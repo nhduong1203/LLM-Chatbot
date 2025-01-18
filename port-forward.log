@@ -1,0 +1,2 @@
+nohup: ignoring input
+Error from server (NotFound): services "jaeger-query" not found
