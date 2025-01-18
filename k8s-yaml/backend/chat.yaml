@@ -18,18 +18,23 @@ spec:
       - name: backend-chat
         image: sieucun/llmops-chat
         ports:
-        - containerPort: 8001
+        - containerPort: 8002
         env:
         - name: REDIS_HOST
           value: redis
         - name: REDIS_PORT
           value: "6379"
         - name: DOC_API_URL
-          value: http://backend-doc:8000
+          value: http://backend-doc:8001
         - name: CASSANDRA_PORT
           value: "9042"
         - name: CASSANDRA_HOST
           value: cassandra
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-api-key
+              key: OPENAI_API_KEY
 ---
 apiVersion: v1
 kind: Service
@@ -39,5 +44,5 @@ spec:
   selector:
     app: backend-chat
   ports:
-  - port: 8001
-    targetPort: 8001
+  - port: 8002
+    targetPort: 8002

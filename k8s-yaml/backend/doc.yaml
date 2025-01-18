@@ -18,7 +18,7 @@ spec:
       - name: backend-doc
         image: sieucun/llmops-doc:latest
         ports:
-        - containerPort: 8000
+        - containerPort: 8001
         env:
         - name: REDIS_HOST
           value: redis
@@ -39,5 +39,5 @@ spec:
   selector:
     app: backend-doc
   ports:
-  - port: 8000
-    targetPort: 8000
+  - port: 8001
+    targetPort: 8001
