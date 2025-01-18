@@ -6,7 +6,7 @@ Welcome to **Chat With Your Documents**, an advanced stateful chatbot applicatio
 ## ✨ Key Features
 
 - **🤝 Stateful Conversations**: Maintain the context of your queries for more intelligent and coherent interactions.
-- **📄 Document Integration**: Upload files or provide URLs to make your documents chat-ready.
+- **📄 Retrieval-Augmented Generation System**: Seamlessly upload files or provide URLs to enable dynamic, context-aware conversations with your documents by leveraging retrieval-augmented generation techniques.
 - **🚀 Google Kubernetes Deployment**: Deployed seamlessly on Google Kubernetes Engine (GKE) for scalable and robust operations.
 - **🔄 CI/CD Integration**: Equipped with a Continuous Integration and Continuous Deployment (CI/CD) pipeline to ensure fast, reliable updates and maintenance. *(In progress...)*
 
