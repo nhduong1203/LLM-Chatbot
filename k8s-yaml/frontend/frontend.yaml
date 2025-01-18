@@ -21,11 +21,11 @@ spec:
         - containerPort: 8501
         env:
         - name: DOC_API_URL
-          value: http://backend-doc:8000
+          value: http://backend-doc:8001
         - name: CHAT_API_URL
-          value: http://backend-chat:8001
+          value: http://backend-chat:8002
         - name: NGINX_URL
-          value: http://nginx:80
+          value: nginx:80
 
 ---
 
