@@ -18,14 +18,14 @@ This repository contains all the resources you need to deploy, customize, and us
   <img src="images/demo-0.png">
 </p>
 <p align="center">
-  <strong>Figure 1.</strong> Frontend.
+  <strong>Figure 1.</strong> Demo of the Chatbot Without External Knowledge
 </p>
 
 <p align="center">
   <img src="images/demo-1.png">
 </p>
 <p align="center">
-  <strong>Figure 1.</strong> Frontend.
+  <strong>Figure 2.</strong> Demo of the Chatbot After Adding External Knowledge via the RAG System
 </p>
 
 
@@ -35,7 +35,7 @@ This repository contains all the resources you need to deploy, customize, and us
   <img src="images/system.png">
 </p>
 <p align="center">
-  <strong>Figure 1.</strong> Frontend.
+  <strong>Figure 3.</strong> System Overview.
 </p>
 
 ---
@@ -105,7 +105,7 @@ Follow these steps to set up and run the application:
   <img src="images/deployment.png">
 </p>
 <p align="center">
-  <strong>Figure 1.</strong> Frontend.
+  <strong>Figure 4.</strong> GKE Deployment Overview.
 </p>
 
 ### 1.1 Build Application Image
@@ -223,7 +223,7 @@ With NodePort Service, you can access the frontend from the external IP of a nod
   <img src="images/frontend.png">
 </p>
 <p align="center">
-  <strong>Figure 1.</strong> Frontend.
+  <strong>Figure 5.</strong> Access frontend via Node's External IP.
 </p>
 
 ## Observability
@@ -287,7 +287,7 @@ So far, we have deployed the model and the FastAPI app to GKE. Now, we need to m
   <img src="images/jaeger.png">
 </p>
 <p align="center">
-  <strong>Figure 1.</strong> Frontend.
+  <strong>Figure 6.</strong> Tracing from Jaeger.
 </p>
 
    6.2. **Kibana**:
@@ -304,7 +304,7 @@ So far, we have deployed the model and the FastAPI app to GKE. Now, we need to m
   <img src="images/elastic.png">
 </p>
 <p align="center">
-  <strong>Figure 1.</strong> Frontend.
+  <strong>Figure 7.</strong> Kibana Logging.
 </p>
 
 
@@ -324,6 +324,6 @@ So far, we have deployed the model and the FastAPI app to GKE. Now, we need to m
   <img src="images/metric.png">
 </p>
 <p align="center">
-  <strong>Figure 1.</strong> Frontend.
+  <strong>Figure 8.</strong> Metric from Grafana.
 </p>
 
