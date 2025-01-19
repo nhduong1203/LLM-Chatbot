@@ -12,6 +12,53 @@ Welcome to **Chat With Your Documents**, an advanced stateful chatbot applicatio
 
 This repository contains all the resources you need to deploy, customize, and use the application effectively. Dive into the sections below to get started! 🚀
 
+## 🌟 System Overview
+
+<p align="center">
+  <img src="images/system.png">
+</p>
+<p align="center">
+  <strong>Figure 1.</strong> Frontend.
+</p>
+
+---
+
+### 📄 RAG - System
+
+- **Document Upload**: 🗂️ Users can upload their documents (including files or URLs) to the chatbot. The content from these files or URLs is saved in **MinIO** for further processing.
+  
+- **Vectorization**:
+  - **🔍 Semantic Chunking**: Documents are split into smaller, meaningful chunks using semantic chunking techniques. Semantic chunking ensures that each segment of the document preserves contextual relevance, making it easier to retrieve and understand. For example, sections, paragraphs, or logical groupings of information are treated as distinct chunks.
+  - **📦 Embedding and Storage**: Each chunk is converted into embeddings (vector representations) and stored in **Redis Vector Database** for efficient similarity-based retrieval during queries.
+
+---
+
+### 💬 Chat System
+
+- **User Session**:
+  - **🔗 Stateful Connection**: A WebSocket connection is established between the user and the server to maintain a stateful session.
+  - **📜 Historical Context**: At the start of the session, historical conversation data is fetched from **Cassandra** to provide the chatbot with contextual knowledge of past interactions. This allows the chatbot to respond more effectively by considering previous queries and answers.
+  - **📈 Incremental Updates**: WebSockets enable real-time, incremental updates to the historical conversation data, ensuring the context is always up-to-date.
+
+- **Message Processing**:
+  - **🛠️ Standalone Question Creation**: Each user message, along with its historical context, is processed to generate a **standalone question** using OpenAI. The standalone question is reformulated to be independent of previous interactions, improving both context retrieval and input clarity for the LLM.
+  - **Example**:
+    ```
+    User: Do you know Elon Musk?
+    Bot: Yes, I know him.
+    User: Is HE the richest man in the world?
+    ```
+    **Standalone Question**: *Is Elon Musk the richest man in the world?*
+
+- **📚 Context Retrieval**:
+  - The embedding of the standalone question is used to query the **Redis Vector Database**, retrieving relevant chunks of external context.
+
+- **🧠 Response Generation**:
+  - The standalone question and the retrieved context are sent to the **OpenAI API** to generate a response.
+  - The user’s question and the chatbot's response are then stored in **Cassandra** to update the conversation history.
+
+This system architecture ensures accurate, context-aware responses and efficient handling of document-based queries. 🚀
+
 ---
 
 ## 🚀 Getting Started
@@ -36,6 +83,13 @@ Follow these steps to set up and run the application:
 ---
 
 ## 🚀 Application Deployment
+
+<p align="center">
+  <img src="images/deployment.png">
+</p>
+<p align="center">
+  <strong>Figure 1.</strong> Frontend.
+</p>
 
 ### 1.1 Build Application Image
 
@@ -125,10 +179,12 @@ Follow these steps to set up and run the application:
    kubectl apply -f {service-name}.yaml
    ```
 
-4. Create a Secret: Store the OpenAI API key in a Kubernetes secret:
+4. Create a Secret: store the OpenAI API key in a Kubernetes secret:
     ```bash
     kubectl create secret generic openai-api-key --from-literal=OPENAI_API_KEY=<your_openai_api_key>
     ```
+**Note:** To deploy Cassandra, first run `cassandra-deployment.yaml` to start Cassandra. Then, run `cassandra-init-job.yaml` to initialize the keyspace, tables, and other required configurations.
+
 ---
 
 ## 📄 Instances in My GKE Cluster
