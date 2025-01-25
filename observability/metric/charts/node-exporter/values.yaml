@@ -1,3 +1,0 @@
-node_exporter:
-  image: prom/node-exporter
-  containerPort: 9100
