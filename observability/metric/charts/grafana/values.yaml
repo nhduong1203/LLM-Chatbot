@@ -1,3 +1,0 @@
-grafana:
-  image: grafana/grafana:9.0.5
-  containerPort: 3000

@@ -1,3 +1,0 @@
-cadvisor:
-  image: gcr.io/cadvisor/cadvisor:latest
-  containerPort: 8080
